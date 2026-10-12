@@ -5,8 +5,10 @@ export type Status = typeof statuses[number];
 export type Line = { id: string; designation: string; reference: string; quantity: number; price: number; vat: number };
 export type CommercialDocument = { id: string; reference: string; type: DocumentType; clientId: string; date: string; validity: number; status: Status; lines: Line[]; notes: string; modified: string };
 export type DemoEvent = { id: string; documentId: string; reference: string; action: string; date: string };
-export type DemoState = { version: 1; documents: CommercialDocument[]; events: DemoEvent[] };
-export const clients = [
+export type Client = { id: string; name: string; initials: string; city: string; sector: string; address: string; contact: string; phone?: string; email?: string };
+export type Product = { reference: string; designation: string; price: number; category: string; unit: string; description: string; stock: number; minStock: number };
+export type DemoState = { version: 1; documents: CommercialDocument[]; events: DemoEvent[]; clients?: Client[]; products?: Product[] };
+const seedClients: Client[] = [
   { id: 'c1', name: 'Hydro Atlas Démo', initials: 'HA', city: 'Alger', sector: 'Hydraulique industrielle', address: 'Zone technique fictive A · Alger', contact: 'Service des achats (démo)' },
   { id: 'c2', name: 'Agripôle Démo', initials: 'AG', city: 'Blida', sector: 'Irrigation agricole', address: 'Zone agricole fictive B · Blida', contact: 'Service des achats (démo)' },
   { id: 'c3', name: 'Eaux du Tell Démo', initials: 'ET', city: 'Sétif', sector: 'Traitement des eaux', address: 'Zone technique fictive C · Sétif', contact: 'Service des achats (démo)' },
@@ -14,14 +16,22 @@ export const clients = [
   { id: 'c5', name: 'Oasis Équipements Démo', initials: 'OE', city: 'Biskra', sector: 'Équipements agricoles', address: 'Zone agricole fictive E · Biskra', contact: 'Service des achats (démo)' },
   { id: 'c6', name: 'Industries Horizon Démo', initials: 'IH', city: 'Constantine', sector: 'Industrie et maintenance', address: 'Zone industrielle fictive F · Constantine', contact: 'Service des achats (démo)' },
 ];
-export const catalog = [
-  { reference: 'PMP-SUB-075', designation: 'Pompe submersible 7,5 kW', price: 185000, category: 'Pompes', unit: 'Unité', description: 'Débit 18 m³/h · HMT 85 m · Triphasée' },
-  { reference: 'PMP-CEN-055', designation: 'Pompe centrifuge 5,5 kW', price: 128000, category: 'Pompes', unit: 'Unité', description: 'Débit 30 m³/h · HMT 42 m · Fonte' },
-  { reference: 'COF-CMD-075', designation: 'Coffret de commande 7,5 kW', price: 45000, category: 'Électricité', unit: 'Unité', description: 'Protection thermique · Démarrage direct' },
-  { reference: 'TUB-PEHD-63', designation: 'Tuyauterie PEHD Ø 63 mm', price: 850, category: 'Tuyauterie', unit: 'Mètre', description: 'PN16 · Eau potable · Diamètre 63 mm' },
-  { reference: 'ACC-CLP-50', designation: 'Clapet anti-retour DN50', price: 12500, category: 'Accessoires', unit: 'Unité', description: 'Corps laiton · Raccord fileté' },
-  { reference: 'SRV-INST', designation: 'Installation et mise en service', price: 35000, category: 'Services', unit: 'Forfait', description: 'Montage · Raccordement · Essais de fonctionnement' },
+const seedCatalog: Product[] = [
+  { reference: 'PMP-SUB-075', designation: 'Pompe submersible 7,5 kW', price: 185000, category: 'Pompes', unit: 'Unité', description: 'Débit 18 m³/h · HMT 85 m · Triphasée' , stock: 12, minStock: 3 },
+  { reference: 'PMP-CEN-055', designation: 'Pompe centrifuge 5,5 kW', price: 128000, category: 'Pompes', unit: 'Unité', description: 'Débit 30 m³/h · HMT 42 m · Fonte' , stock: 8, minStock: 2 },
+  { reference: 'COF-CMD-075', designation: 'Coffret de commande 7,5 kW', price: 45000, category: 'Électricité', unit: 'Unité', description: 'Protection thermique · Démarrage direct' , stock: 20, minStock: 5 },
+  { reference: 'TUB-PEHD-63', designation: 'Tuyauterie PEHD Ø 63 mm', price: 850, category: 'Tuyauterie', unit: 'Mètre', description: 'PN16 · Eau potable · Diamètre 63 mm' , stock: 1500, minStock: 300 },
+  { reference: 'ACC-CLP-50', designation: 'Clapet anti-retour DN50', price: 12500, category: 'Accessoires', unit: 'Unité', description: 'Corps laiton · Raccord fileté' , stock: 45, minStock: 10 },
+  { reference: 'SRV-INST', designation: 'Installation et mise en service', price: 35000, category: 'Services', unit: 'Forfait', description: 'Montage · Raccordement · Essais de fonctionnement' , stock: 99, minStock: 0 },
 ];
+export const clients: Client[] = seedClients.map(c => ({ ...c }));
+export const catalog: Product[] = seedCatalog.map(p => ({ ...p }));
+/** Keeps the shared lookup arrays aligned with the session state (clients and stock added during the demo). */
+export function syncReferences(state: Partial<DemoState>) {
+  const c = Array.isArray(state.clients) && state.clients.length ? state.clients : seedClients; if (c !== clients) clients.splice(0, clients.length, ...c);
+  const p = Array.isArray(state.products) && state.products.length ? state.products : seedCatalog; if (p !== catalog) catalog.splice(0, catalog.length, ...p);
+}
+export function initialsFor(name: string) { return name.split(/\s+/).filter(w => w && !/^d[eu]s?$/i.test(w)).slice(0, 2).map(w => w[0]?.toUpperCase()).join('') || 'CL'; }
 export function money(value: number) { return new Intl.NumberFormat('fr-DZ', { maximumFractionDigits: 2 }).format(value).replace(/[\u00a0\u202f]/g, ' ') + ' DA'; }
 export function shortDate(value: string) { return new Intl.DateTimeFormat('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' }).format(new Date(value)); }
 export function totals(lines: Line[]) { const subtotal = lines.reduce((a, l) => a + l.quantity * l.price, 0); const vat = lines.reduce((a, l) => a + l.quantity * l.price * l.vat / 100, 0); return { subtotal, vat, total: subtotal + vat }; }
@@ -42,7 +52,7 @@ export function initialState(): DemoState {
     ['FAC-2026-016', 'Facture', 'c3', '2026-10-02', 'Finalisé', 1, 4],
   ];
   const documents = seed.map((s, i): CommercialDocument => ({ id: `doc-${i + 1}`, reference: s[0], type: s[1], clientId: s[2], date: s[3], status: s[4], validity: 30, lines: [{ ...makeLine(s[5]), quantity: s[6] }, { ...makeLine(2), quantity: s[6] }, { ...makeLine(5), quantity: 1 }], notes: 'Fourniture et équipement de pompage. Données de démonstration uniquement.', modified: `${s[3]}T09:30:00` }));
-  return { version: 1, documents, events: documents.map((d, i) => ({ id: `event-${i}`, documentId: d.id, reference: d.reference, action: d.status === 'Finalisé' ? 'Document finalisé' : d.status === 'Archivé' ? 'Document archivé' : d.status === 'À valider' ? 'Document à valider' : 'Document créé', date: d.modified })) };
+  return { version: 1, clients: seedClients.map(c => ({ ...c })), products: seedCatalog.map(p => ({ ...p })), documents, events: documents.map((d, i) => ({ id: `event-${i}`, documentId: d.id, reference: d.reference, action: d.status === 'Finalisé' ? 'Document finalisé' : d.status === 'Archivé' ? 'Document archivé' : d.status === 'À valider' ? 'Document à valider' : 'Document créé', date: d.modified })) };
 }
 export function isDemoState(value: unknown): value is DemoState {
   if (!value || typeof value !== 'object') return false;
