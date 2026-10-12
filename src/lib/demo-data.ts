@@ -26,7 +26,7 @@ export function money(value: number) { return new Intl.NumberFormat('fr-DZ', { m
 export function shortDate(value: string) { return new Intl.DateTimeFormat('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' }).format(new Date(value)); }
 export function totals(lines: Line[]) { const subtotal = lines.reduce((a, l) => a + l.quantity * l.price, 0); const vat = lines.reduce((a, l) => a + l.quantity * l.price * l.vat / 100, 0); return { subtotal, vat, total: subtotal + vat }; }
 export function clientName(id: string) { return clients.find(c => c.id === id)?.name ?? 'Client de démonstration'; }
-export function makeLine(index = 0): Line { const p = catalog[index] ?? catalog[0]; return { id: crypto.randomUUID(), designation: p.designation, reference: p.reference, quantity: 1, price: p.price, vat: 19 }; }
+export function makeLine(index = 0): Line { const p = catalog[index] ?? catalog[0]; if (!p) throw new Error('Catalogue de démonstration vide'); return { id: crypto.randomUUID(), designation: p.designation, reference: p.reference, quantity: 1, price: p.price, vat: 19 }; }
 export function referenceFor(type: DocumentType, documents: CommercialDocument[]) { const prefix = type === 'Devis' ? 'DEV' : type === 'Facture' ? 'FAC' : 'BL'; const max = documents.filter(d => d.reference.startsWith(prefix + '-2026-')).reduce((n, d) => Math.max(n, Number(d.reference.split('-').at(-1)) || 0), 0); return `${prefix}-2026-${String(max + 1).padStart(3, '0')}`; }
 export function initialState(): DemoState {
   const seed: [string, DocumentType, string, string, Status, number, number][] = [
