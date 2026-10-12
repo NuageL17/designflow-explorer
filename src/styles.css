@@ -87,7 +87,8 @@
 .stat-top svg { height: 16px; width: 16px; }
 .stat-value { font-size: 29px; font-weight: 600; margin: 11px 0 8px; line-height: 1.15; white-space: nowrap; }
 .stat-value.money-stat { font-size: 25px; }
-.stat-note { display: flex; gap: 5px; align-items: center; font-size: 10px; color: var(--muted-foreground); }
+.stat-note { display: flex; gap: 5px; align-items: center; font-size: 10px; color: var(--muted-foreground); flex-wrap: wrap; }
+.stat-note > span { white-space: nowrap; }
 .stat-note svg { height: 12px; width: 12px; }
 .surface { border: 1px solid var(--border); background: var(--card); border-radius: 7px; overflow: hidden; box-shadow: var(--shadow-subtle); }
 .table-header { padding: 18px 20px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
