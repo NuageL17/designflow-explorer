@@ -6,7 +6,7 @@ import { useDemo } from '@/components/demo-provider';
 import { DocumentTable } from '@/components/document-table';
 import { statuses, documentTypes, clientName, totals } from '@/lib/demo-data';
 import { pageHead } from '@/lib/page-head';
-export const Route = createFileRoute('/documents/')({ validateSearch: (s: Record<string, unknown>): { q?: string } => ({ q: typeof s['q'] === 'string' ? s['q'] : undefined }), head: () => pageHead('Documents', 'Consultez, filtrez et modifiez vos documents commerciaux fictifs dans FLOW MASTER.'), component: Documents });
+export const Route = createFileRoute('/documents/')({ validateSearch: (s: Record<string, unknown>): { q?: string } => typeof s['q'] === 'string' ? { q: s['q'] } : {}, head: () => pageHead('Documents', 'Consultez, filtrez et modifiez vos documents commerciaux fictifs dans FLOW MASTER.'), component: Documents });
 function Documents() {
   const { state, create } = useDemo();
   const { q } = Route.useSearch();
