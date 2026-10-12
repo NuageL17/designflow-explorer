@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import { toast } from 'sonner';
-import { initialState, isDemoState, makeLine, referenceFor, type CommercialDocument, type DemoState, type DocumentType, type Status } from '@/lib/demo-data';
+import { initialState, isDemoState, syncReferences, initialsFor, clients as clientList, catalog as productList, type Client, type Product, makeLine, referenceFor, type CommercialDocument, type DemoState, type DocumentType, type Status } from '@/lib/demo-data';
 
 type DemoContextValue = {
   state: DemoState;
@@ -17,6 +17,9 @@ type DemoContextValue = {
   settings: boolean;
   setSettings: (open: boolean) => void;
   reset: () => void;
+  addClient: (client: Omit<Client, 'id' | 'initials'>) => string;
+  saveProduct: (product: Product, isNew: boolean) => void;
+  adjustStock: (reference: string, delta: number) => void;
 };
 const DemoContext = createContext<DemoContextValue | null>(null);
 const storageKey = 'flow-master-demo-v1';
@@ -27,8 +30,9 @@ export function DemoProvider({ children }: { children: ReactNode }) {
   const [finalize, setFinalize] = useState<CommercialDocument | null>(null);
   const [archiveId, setArchiveId] = useState<string | null>(null);
   const [settings, setSettings] = useState(false);
+  syncReferences(state);
   useEffect(() => {
-    try { const saved = localStorage.getItem(storageKey); if (saved) { const parsed: unknown = JSON.parse(saved); if (isDemoState(parsed)) setState(parsed); else toast.info('Les données de démonstration ont été restaurées.'); } } catch { toast.info('Stockage indisponible : les changements restent disponibles pendant cette session.'); }
+    try { const saved = localStorage.getItem(storageKey); if (saved) { const parsed: unknown = JSON.parse(saved); if (parsed && typeof parsed === 'object') syncReferences(parsed as Partial<DemoState>); if (isDemoState(parsed)) setState(parsed); else { syncReferences(initialState()); } toast.info('Les données de démonstration ont été restaurées.'); } } catch { toast.info('Stockage indisponible : les changements restent disponibles pendant cette session.'); }
     setLoaded(true);
   }, []);
   useEffect(() => { if (loaded) { try { localStorage.setItem(storageKey, JSON.stringify(state)); } catch { /* Session state remains usable without browser storage. */ } } }, [state, loaded]);
@@ -42,6 +46,19 @@ export function DemoProvider({ children }: { children: ReactNode }) {
   function changeStatus(id: string, status: Status) { const doc = state.documents.find(d => d.id === id); if (!doc) return; if (status === 'Finalisé') setFinalize(doc); else if (status === 'Archivé') setArchiveId(id); else save(doc, status); }
   function duplicate(doc: CommercialDocument) { setEditor({ ...doc, id: crypto.randomUUID(), reference: referenceFor(doc.type, state.documents), status: 'Brouillon', date: '2026-10-12', lines: doc.lines.map(l => ({ ...l, id: crypto.randomUUID() })) }); toast.info('Copie préparée. Enregistrez-la pour créer le document.'); }
   function reset() { setState(initialState()); setEditor(null); setFinalize(null); setArchiveId(null); toast.success('La démonstration a été réinitialisée.'); }
-  return <DemoContext.Provider value={{ state, editor, setEditor, create, save, changeStatus, duplicate, finalize, setFinalize, archiveId, setArchiveId, settings, setSettings, reset }}>{children}</DemoContext.Provider>;
+  function addClient(data: Omit<Client, 'id' | 'initials'>) {
+    const id = `c-${crypto.randomUUID().slice(0, 8)}`;
+    const client: Client = { ...data, id, initials: initialsFor(data.name) };
+    setState(prev => ({ ...prev, clients: [...(prev.clients ?? clientList), client] }));
+    toast.success(`Client ajouté · ${client.name}`); return id;
+  }
+  function saveProduct(product: Product, isNew: boolean) {
+    setState(prev => { const list = prev.products ?? productList; return { ...prev, products: isNew ? [...list, product] : list.map(p => p.reference === product.reference ? product : p) }; });
+    toast.success(isNew ? `Matériel ajouté · ${product.designation}` : `Matériel mis à jour · ${product.designation}`);
+  }
+  function adjustStock(reference: string, delta: number) {
+    setState(prev => ({ ...prev, products: (prev.products ?? productList).map(p => p.reference === reference ? { ...p, stock: Math.max(0, p.stock + delta) } : p) }));
+  }
+  return <DemoContext.Provider value={{ addClient, saveProduct, adjustStock, state, editor, setEditor, create, save, changeStatus, duplicate, finalize, setFinalize, archiveId, setArchiveId, settings, setSettings, reset }}>{children}</DemoContext.Provider>;
 }
 export function useDemo() { const context = useContext(DemoContext); if (!context) throw new Error('DemoProvider is required'); return context; }
