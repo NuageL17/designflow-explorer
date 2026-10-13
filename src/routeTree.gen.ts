@@ -14,6 +14,7 @@ import { Route as CatalogueRouteImport } from './routes/catalogue'
 import { Route as DocumentsRouteImport } from './routes/documents'
 import { Route as HistoriqueRouteImport } from './routes/historique'
 import { Route as ClientsIndexRouteImport } from './routes/clients.index'
+import { Route as ClientsIdRouteImport } from './routes/clients.$id'
 import { Route as DocumentsIndexRouteImport } from './routes/documents.index'
 import { Route as DocumentsIdRouteImport } from './routes/documents.$id'
 
@@ -42,6 +43,11 @@ const ClientsIndexRoute = ClientsIndexRouteImport.update({
   path: '/clients/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ClientsIdRoute = ClientsIdRouteImport.update({
+  id: '/clients/$id',
+  path: '/clients/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DocumentsIndexRoute = DocumentsIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -58,6 +64,7 @@ export interface FileRoutesByFullPath {
   '/catalogue': typeof CatalogueRoute
   '/documents': typeof DocumentsRouteWithChildren
   '/historique': typeof HistoriqueRoute
+  '/clients/$id': typeof ClientsIdRoute
   '/documents/$id': typeof DocumentsIdRoute
   '/clients/': typeof ClientsIndexRoute
   '/documents/': typeof DocumentsIndexRoute
@@ -66,6 +73,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/catalogue': typeof CatalogueRoute
   '/historique': typeof HistoriqueRoute
+  '/clients/$id': typeof ClientsIdRoute
   '/documents/$id': typeof DocumentsIdRoute
   '/clients': typeof ClientsIndexRoute
   '/documents': typeof DocumentsIndexRoute
@@ -76,6 +84,7 @@ export interface FileRoutesById {
   '/catalogue': typeof CatalogueRoute
   '/documents': typeof DocumentsRouteWithChildren
   '/historique': typeof HistoriqueRoute
+  '/clients/$id': typeof ClientsIdRoute
   '/documents/$id': typeof DocumentsIdRoute
   '/clients/': typeof ClientsIndexRoute
   '/documents/': typeof DocumentsIndexRoute
@@ -87,6 +96,7 @@ export interface FileRouteTypes {
     | '/catalogue'
     | '/documents'
     | '/historique'
+    | '/clients/$id'
     | '/documents/$id'
     | '/clients/'
     | '/documents/'
@@ -95,6 +105,7 @@ export interface FileRouteTypes {
     | '/'
     | '/catalogue'
     | '/historique'
+    | '/clients/$id'
     | '/documents/$id'
     | '/clients'
     | '/documents'
@@ -104,6 +115,7 @@ export interface FileRouteTypes {
     | '/catalogue'
     | '/documents'
     | '/historique'
+    | '/clients/$id'
     | '/documents/$id'
     | '/clients/'
     | '/documents/'
@@ -114,6 +126,7 @@ export interface RootRouteChildren {
   CatalogueRoute: typeof CatalogueRoute
   DocumentsRoute: typeof DocumentsRouteWithChildren
   HistoriqueRoute: typeof HistoriqueRoute
+  ClientsIdRoute: typeof ClientsIdRoute
   ClientsIndexRoute: typeof ClientsIndexRoute
 }
 
@@ -154,6 +167,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ClientsIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/clients/$id': {
+      id: '/clients/$id'
+      path: '/clients/$id'
+      fullPath: '/clients/$id'
+      preLoaderRoute: typeof ClientsIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/documents/': {
       id: '/documents/'
       path: '/'
@@ -190,6 +210,7 @@ const rootRouteChildren: RootRouteChildren = {
   CatalogueRoute: CatalogueRoute,
   DocumentsRoute: DocumentsRouteWithChildren,
   HistoriqueRoute: HistoriqueRoute,
+  ClientsIdRoute: ClientsIdRoute,
   ClientsIndexRoute: ClientsIndexRoute,
 }
 export const routeTree = rootRouteImport

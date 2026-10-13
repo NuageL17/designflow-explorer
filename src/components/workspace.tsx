@@ -7,7 +7,7 @@ import { useDemo } from '@/components/demo-provider';
 import { DemoDialogs } from '@/components/document-editor';
 import type { ReactNode } from 'react';
 
-const nav = [{ to: '/' as const, label: 'Vue d’ensemble', icon: LayoutDashboard }, { to: '/documents' as const, label: 'Documents', icon: Files }, { to: '/clients' as const, label: 'Clients', icon: UsersRound }, { to: '/catalogue' as const, label: 'Catalogue', icon: Package }, { to: '/historique' as const, label: 'Historique', icon: History }];
+const nav = [{ to: '/' as const, label: 'Vue d’ensemble', icon: LayoutDashboard }, { to: '/documents' as const, label: 'Documents', icon: Files }, { to: '/clients' as const, label: 'Clients', icon: UsersRound }, { to: '/catalogue' as const, label: 'Matériel et stock', icon: Package }, { to: '/historique' as const, label: 'Historique', icon: History }];
 export function Workspace({ children }: { children: ReactNode }) {
   const pathname = useRouterState({ select: s => s.location.pathname });
   const { state, create, setSettings } = useDemo();
