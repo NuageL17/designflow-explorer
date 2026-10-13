@@ -32,7 +32,7 @@ export function DemoProvider({ children }: { children: ReactNode }) {
   const [settings, setSettings] = useState(false);
   syncReferences(state);
   useEffect(() => {
-    try { const saved = localStorage.getItem(storageKey); if (saved) { const parsed: unknown = JSON.parse(saved); if (parsed && typeof parsed === 'object') syncReferences(parsed as Partial<DemoState>); if (isDemoState(parsed)) setState(parsed); else { syncReferences(initialState()); } toast.info('Les données de démonstration ont été restaurées.'); } } catch { toast.info('Stockage indisponible : les changements restent disponibles pendant cette session.'); }
+    try { const saved = localStorage.getItem(storageKey); if (saved) { const parsed: unknown = JSON.parse(saved); if (parsed && typeof parsed === 'object') syncReferences(parsed as Partial<DemoState>); if (isDemoState(parsed)) setState(parsed); else { syncReferences(initialState()); toast.info('Les données de démonstration ont été restaurées.'); } } } catch { toast.info('Stockage indisponible : les changements restent disponibles pendant cette session.'); }
     setLoaded(true);
   }, []);
   useEffect(() => { if (loaded) { try { localStorage.setItem(storageKey, JSON.stringify(state)); } catch { /* Session state remains usable without browser storage. */ } } }, [state, loaded]);
