@@ -11,9 +11,10 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as CatalogueRouteImport } from './routes/catalogue'
-import { Route as ClientsRouteImport } from './routes/clients'
 import { Route as DocumentsRouteImport } from './routes/documents'
 import { Route as HistoriqueRouteImport } from './routes/historique'
+import { Route as ClientsIndexRouteImport } from './routes/clients.index'
+import { Route as ClientsIdRouteImport } from './routes/clients.$id'
 import { Route as DocumentsIndexRouteImport } from './routes/documents.index'
 import { Route as DocumentsIdRouteImport } from './routes/documents.$id'
 
@@ -27,11 +28,6 @@ const CatalogueRoute = CatalogueRouteImport.update({
   path: '/catalogue',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ClientsRoute = ClientsRouteImport.update({
-  id: '/clients',
-  path: '/clients',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const DocumentsRoute = DocumentsRouteImport.update({
   id: '/documents',
   path: '/documents',
@@ -40,6 +36,16 @@ const DocumentsRoute = DocumentsRouteImport.update({
 const HistoriqueRoute = HistoriqueRouteImport.update({
   id: '/historique',
   path: '/historique',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ClientsIndexRoute = ClientsIndexRouteImport.update({
+  id: '/clients/',
+  path: '/clients/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ClientsIdRoute = ClientsIdRouteImport.update({
+  id: '/clients/$id',
+  path: '/clients/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DocumentsIndexRoute = DocumentsIndexRouteImport.update({
@@ -56,28 +62,31 @@ const DocumentsIdRoute = DocumentsIdRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/catalogue': typeof CatalogueRoute
-  '/clients': typeof ClientsRoute
   '/documents': typeof DocumentsRouteWithChildren
   '/historique': typeof HistoriqueRoute
+  '/clients/$id': typeof ClientsIdRoute
   '/documents/$id': typeof DocumentsIdRoute
+  '/clients/': typeof ClientsIndexRoute
   '/documents/': typeof DocumentsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/catalogue': typeof CatalogueRoute
-  '/clients': typeof ClientsRoute
   '/historique': typeof HistoriqueRoute
+  '/clients/$id': typeof ClientsIdRoute
   '/documents/$id': typeof DocumentsIdRoute
+  '/clients': typeof ClientsIndexRoute
   '/documents': typeof DocumentsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/catalogue': typeof CatalogueRoute
-  '/clients': typeof ClientsRoute
   '/documents': typeof DocumentsRouteWithChildren
   '/historique': typeof HistoriqueRoute
+  '/clients/$id': typeof ClientsIdRoute
   '/documents/$id': typeof DocumentsIdRoute
+  '/clients/': typeof ClientsIndexRoute
   '/documents/': typeof DocumentsIndexRoute
 }
 export interface FileRouteTypes {
@@ -85,36 +94,40 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/catalogue'
-    | '/clients'
     | '/documents'
     | '/historique'
+    | '/clients/$id'
     | '/documents/$id'
+    | '/clients/'
     | '/documents/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/catalogue'
-    | '/clients'
     | '/historique'
+    | '/clients/$id'
     | '/documents/$id'
+    | '/clients'
     | '/documents'
   id:
     | '__root__'
     | '/'
     | '/catalogue'
-    | '/clients'
     | '/documents'
     | '/historique'
+    | '/clients/$id'
     | '/documents/$id'
+    | '/clients/'
     | '/documents/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   CatalogueRoute: typeof CatalogueRoute
-  ClientsRoute: typeof ClientsRoute
   DocumentsRoute: typeof DocumentsRouteWithChildren
   HistoriqueRoute: typeof HistoriqueRoute
+  ClientsIdRoute: typeof ClientsIdRoute
+  ClientsIndexRoute: typeof ClientsIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -133,13 +146,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CatalogueRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/clients': {
-      id: '/clients'
-      path: '/clients'
-      fullPath: '/clients'
-      preLoaderRoute: typeof ClientsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/documents': {
       id: '/documents'
       path: '/documents'
@@ -152,6 +158,20 @@ declare module '@tanstack/react-router' {
       path: '/historique'
       fullPath: '/historique'
       preLoaderRoute: typeof HistoriqueRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/clients/': {
+      id: '/clients/'
+      path: '/clients'
+      fullPath: '/clients/'
+      preLoaderRoute: typeof ClientsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/clients/$id': {
+      id: '/clients/$id'
+      path: '/clients/$id'
+      fullPath: '/clients/$id'
+      preLoaderRoute: typeof ClientsIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/documents/': {
@@ -188,9 +208,10 @@ const DocumentsRouteWithChildren = DocumentsRoute._addFileChildren(
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   CatalogueRoute: CatalogueRoute,
-  ClientsRoute: ClientsRoute,
   DocumentsRoute: DocumentsRouteWithChildren,
   HistoriqueRoute: HistoriqueRoute,
+  ClientsIdRoute: ClientsIdRoute,
+  ClientsIndexRoute: ClientsIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
