@@ -7,6 +7,10 @@
 import { defineConfig } from "@lovable.dev/vite-tanstack-config";
 
 export default defineConfig({
+  // C'est ici que l'on passe les options à Vite directement.
+  vite: {
+    base: './', // <-- La ligne cruciale pour les chemins relatifs
+  },
   tanstackStart: {
     // Redirect TanStack Start's bundled server entry to src/server.ts (our SSR error wrapper).
     // nitro/vite builds from this
