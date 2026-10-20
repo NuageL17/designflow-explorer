@@ -1,9 +1,19 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import { toast } from 'sonner';
-import { initialState, isDemoState, syncReferences, initialsFor, clients as clientList, catalog as productList, type Client, type Product, makeLine, referenceFor, type CommercialDocument, type DemoState, type DocumentType, type Status } from '@/lib/demo-data';
+import { api } from '@/lib/api';
+import { dbClientToReact, dbDocumentToReact, reactDocumentToDb } from '@/lib/mappers';
+import {
+  initialState, syncReferences, initialsFor,
+  clients as clientsRef,
+  makeLine, referenceFor,
+  type Client, type Product, type CommercialDocument,
+  type DemoState, type DocumentType, type Status,
+} from '@/lib/demo-data';
 
 type DemoContextValue = {
   state: DemoState;
+  loading: boolean;
+  refreshFromDb: () => Promise<void>;
   editor: CommercialDocument | null;
   setEditor: (doc: CommercialDocument | null) => void;
   create: (type?: DocumentType, clientId?: string) => void;
@@ -17,48 +27,191 @@ type DemoContextValue = {
   settings: boolean;
   setSettings: (open: boolean) => void;
   reset: () => void;
-  addClient: (client: Omit<Client, 'id' | 'initials'>) => string;
+  addClient: (client: Omit<Client, 'id' | 'initials'>) => Promise<string>;
   saveProduct: (product: Product, isNew: boolean) => void;
   adjustStock: (reference: string, delta: number) => void;
 };
+
 const DemoContext = createContext<DemoContextValue | null>(null);
-const storageKey = 'flow-master-demo-v1';
+
 export function DemoProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<DemoState>(initialState);
-  const [loaded, setLoaded] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [editor, setEditor] = useState<CommercialDocument | null>(null);
   const [finalize, setFinalize] = useState<CommercialDocument | null>(null);
   const [archiveId, setArchiveId] = useState<string | null>(null);
   const [settings, setSettings] = useState(false);
-  syncReferences(state);
+
+  async function loadFromDb() {
+    try {
+      const [clientsRaw, docsRaw] = await Promise.all([
+        api.clients.list(),
+        api.documents.list(),
+      ]);
+      const reactClients = (clientsRaw as never[]).map(dbClientToReact);
+      const fullDocs = await Promise.all(
+        (docsRaw as { id: string }[]).map(d => api.documents.get(d.id)),
+      );
+      const reactDocs = fullDocs.filter(Boolean).map(d => dbDocumentToReact(d as never));
+
+      clientsRef.splice(0, clientsRef.length, ...reactClients);
+      syncReferences({ clients: reactClients, documents: reactDocs, events: [] });
+
+      const events = reactDocs.map(d => ({
+        id: `evt-${d.id}`,
+        documentId: d.id,
+        reference: d.reference,
+        action: 'Document enregistré',
+        date: d.modified,
+      }));
+
+      setState({
+        version: 1,
+        clients: reactClients,
+        products: [],
+        documents: reactDocs,
+        events,
+      });
+    } catch (err) {
+      console.error('Erreur de chargement :', err);
+      toast.error('Impossible de charger les données.');
+    }
+  }
+
   useEffect(() => {
-    try { const saved = localStorage.getItem(storageKey); if (saved) { const parsed: unknown = JSON.parse(saved); if (parsed && typeof parsed === 'object') syncReferences(parsed as Partial<DemoState>); if (isDemoState(parsed)) setState(parsed); else { syncReferences(initialState()); toast.info('Les données de démonstration ont été restaurées.'); } } } catch { toast.info('Stockage indisponible : les changements restent disponibles pendant cette session.'); }
-    setLoaded(true);
+    let mounted = true;
+    (async () => {
+      await loadFromDb();
+      if (mounted) setLoading(false);
+    })();
+    return () => { mounted = false; };
   }, []);
-  useEffect(() => { if (loaded) { try { localStorage.setItem(storageKey, JSON.stringify(state)); } catch { /* Session state remains usable without browser storage. */ } } }, [state, loaded]);
-  function save(doc: CommercialDocument, status: Status) {
+
+  async function refreshFromDb() {
+    await loadFromDb();
+  }
+
+  async function save(doc: CommercialDocument, status: Status) {
     const now = new Date().toISOString();
     const next = { ...doc, status, modified: now };
-    setState(prev => { const existing = prev.documents.find(d => d.id === doc.id); return { ...prev, documents: existing ? prev.documents.map(d => d.id === doc.id ? next : d) : [next, ...prev.documents], events: [{ id: crypto.randomUUID(), documentId: doc.id, reference: doc.reference, action: existing ? existing.status !== status ? `État changé : ${status}` : 'Document modifié' : `Document créé · ${status}`, date: now }, ...prev.events] }; });
-    setEditor(null); toast.success(status === 'Finalisé' ? 'Document finalisé · Export simulé, aucun fichier généré.' : `Document enregistré · ${status}`);
+    const clientSnapshot = (state.clients ?? []).find(c => c.id === doc.clientId) ?? null;
+    const payload = reactDocumentToDb(next, clientSnapshot);
+
+    try {
+      await api.documents.save(payload);
+    } catch (err) {
+      console.error('Erreur enregistrement :', err);
+      toast.error("Échec de l'enregistrement.");
+      return;
+    }
+
+    setState(prev => {
+      const existing = prev.documents.find(d => d.id === doc.id);
+      return {
+        ...prev,
+        documents: existing
+          ? prev.documents.map(d => (d.id === doc.id ? next : d))
+          : [next, ...prev.documents],
+        events: [{
+          id: crypto.randomUUID(),
+          documentId: doc.id,
+          reference: doc.reference,
+          action: existing ? 'Document modifié' : 'Document créé',
+          date: now,
+        }, ...prev.events],
+      };
+    });
+
+    setEditor(null);
+    toast.success(status === 'Finalisé' ? 'Document finalisé.' : `Document enregistré · ${status}`);
   }
-  function create(type: DocumentType = 'Devis', clientId = '') { setEditor({ id: crypto.randomUUID(), reference: referenceFor(type, state.documents), type, clientId, date: '2026-10-12', validity: 30, status: 'Brouillon', lines: [makeLine()], notes: '', modified: new Date().toISOString() }); }
-  function changeStatus(id: string, status: Status) { const doc = state.documents.find(d => d.id === id); if (!doc) return; if (status === 'Finalisé') setFinalize(doc); else if (status === 'Archivé') setArchiveId(id); else save(doc, status); }
-  function duplicate(doc: CommercialDocument) { setEditor({ ...doc, id: crypto.randomUUID(), reference: referenceFor(doc.type, state.documents), status: 'Brouillon', date: '2026-10-12', lines: doc.lines.map(l => ({ ...l, id: crypto.randomUUID() })) }); toast.info('Copie préparée. Enregistrez-la pour créer le document.'); }
-  function reset() { setState(initialState()); setEditor(null); setFinalize(null); setArchiveId(null); toast.success('La démonstration a été réinitialisée.'); }
-  function addClient(data: Omit<Client, 'id' | 'initials'>) {
-    const id = `c-${crypto.randomUUID().slice(0, 8)}`;
-    const client: Client = { ...data, id, initials: initialsFor(data.name) };
-    setState(prev => ({ ...prev, clients: [...(prev.clients ?? clientList), client] }));
-    toast.success(`Client ajouté · ${client.name}`); return id;
+
+  function create(type: DocumentType = 'Devis', clientId = '') {
+    setEditor({
+      id: crypto.randomUUID(),
+      reference: referenceFor(type, state.documents),
+      type,
+      clientId,
+      date: new Date().toISOString().slice(0, 10),
+      validity: 30,
+      status: 'Brouillon',
+      lines: [makeLine()],
+      notes: '',
+      modified: new Date().toISOString(),
+    });
   }
-  function saveProduct(product: Product, isNew: boolean) {
-    setState(prev => { const list = prev.products ?? productList; return { ...prev, products: isNew ? [...list, product] : list.map(p => p.reference === product.reference ? product : p) }; });
-    toast.success(isNew ? `Matériel ajouté · ${product.designation}` : `Matériel mis à jour · ${product.designation}`);
+
+  function changeStatus(id: string, status: Status) {
+    const doc = state.documents.find(d => d.id === id);
+    if (!doc) return;
+    if (status === 'Finalisé') setFinalize(doc);
+    else if (status === 'Archivé') setArchiveId(id);
+    else save(doc, status);
   }
-  function adjustStock(reference: string, delta: number) {
-    setState(prev => ({ ...prev, products: (prev.products ?? productList).map(p => p.reference === reference ? { ...p, stock: Math.max(0, p.stock + delta) } : p) }));
+
+  function duplicate(doc: CommercialDocument) {
+    setEditor({
+      ...doc,
+      id: crypto.randomUUID(),
+      reference: referenceFor(doc.type, state.documents),
+      status: 'Brouillon',
+      date: new Date().toISOString().slice(0, 10),
+      lines: doc.lines.map(l => ({ ...l, id: crypto.randomUUID() })),
+    });
+    toast.info('Copie préparée.');
   }
-  return <DemoContext.Provider value={{ addClient, saveProduct, adjustStock, state, editor, setEditor, create, save, changeStatus, duplicate, finalize, setFinalize, archiveId, setArchiveId, settings, setSettings, reset }}>{children}</DemoContext.Provider>;
+
+  function reset() {
+    setState(initialState());
+    clientsRef.splice(0, clientsRef.length);
+    setEditor(null);
+    setFinalize(null);
+    setArchiveId(null);
+    window.location.reload();
+  }
+
+  async function addClient(data: Omit<Client, 'id' | 'initials'>): Promise<string> {
+    const payload = {
+      name: data.name,
+      initials: initialsFor(data.name),
+      city: data.city,
+      sector: data.sector,
+      address: data.address,
+      contact: data.contact,
+      phone: data.phone,
+      email: data.email,
+    };
+    const raw = await api.clients.create(payload);
+    const client = dbClientToReact(raw as never);
+    clientsRef.push(client);
+    setState(prev => ({ ...prev, clients: [...(prev.clients ?? []), client] }));
+    toast.success(`Client ajouté · ${client.name}`);
+    return client.id;
+  }
+
+  function saveProduct(_product: Product, _isNew: boolean) {
+    toast.info('Catalogue non connecté en V1.');
+  }
+
+  function adjustStock(_reference: string, _delta: number) { /* non connecté */ }
+
+  return (
+    <DemoContext.Provider
+      value={{
+        state, loading, refreshFromDb,
+        editor, setEditor, create, save, changeStatus, duplicate,
+        finalize, setFinalize, archiveId, setArchiveId,
+        settings, setSettings, reset,
+        addClient, saveProduct, adjustStock,
+      }}
+    >
+      {children}
+    </DemoContext.Provider>
+  );
 }
-export function useDemo() { const context = useContext(DemoContext); if (!context) throw new Error('DemoProvider is required'); return context; }
+
+export function useDemo() {
+  const ctx = useContext(DemoContext);
+  if (!ctx) throw new Error('DemoProvider is required');
+  return ctx;
+}

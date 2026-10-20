@@ -1,25 +1,74 @@
 import { createFileRoute, Link } from '@tanstack/react-router';
-import { ArrowLeft, Pencil, Copy, Archive, ChevronDown, Check, FileText } from 'lucide-react';
+import { ArrowLeft, Pencil, Copy, Archive, ChevronDown, Check, FileText, Download, FileSpreadsheet } from 'lucide-react';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { useDemo } from '@/components/demo-provider';
 import { StatusBadge } from '@/components/document-table';
 import { ActivityList } from '@/components/activity';
-import { clients, statuses, totals, money, shortDate } from '@/lib/demo-data';
+import { statuses, totals, money, shortDate } from '@/lib/demo-data';
+import { api } from '@/lib/api';
+import { buildDocumentHtml } from '@/lib/pdf-template';
 import { pageHead } from '@/lib/page-head';
-export const Route = createFileRoute('/documents/$id')({ head: ({ params }) => pageHead(`Détail du document ${params.id}`, 'Consultez les lignes, les montants et l’historique d’un document fictif FLOW MASTER.'), component: DocumentDetail });
+
+export const Route = createFileRoute('/documents/$id')({ head: ({ params }) => pageHead(`Détail du document ${params.id}`, 'Consultez les lignes, les montants et l\'historique d\'un document FLOW MASTER.'), component: DocumentDetail });
+
 function DocumentDetail() {
   const { id } = Route.useParams();
   const { state, setEditor, duplicate, changeStatus, setArchiveId, setFinalize } = useDemo();
   const doc = state.documents.find(d => d.id === id);
-  if (!doc) return <div className="empty-state"><FileText size={35} /><h3>Document introuvable</h3><p>Ce document n’existe plus dans la démonstration.</p><Button asChild><Link to="/documents">Retour aux documents</Link></Button></div>;
-  const client = clients.find(c => c.id === doc.clientId);
+  if (!doc) return <div className="empty-state"><FileText size={35} /><h3>Document introuvable</h3><p>Ce document n'existe plus.</p><Button asChild><Link to="/documents">Retour aux documents</Link></Button></div>;
+  const client = (state.clients ?? []).find(c => c.id === doc.clientId);
   const amounts = totals(doc.lines);
   const expiry = new Date(doc.date); expiry.setDate(expiry.getDate() + doc.validity);
+
+  async function exportPdf() {
+    try {
+      const html = buildDocumentHtml(doc, client);
+      const result = await api.documents.generatePdf({ html, fileName: `${doc.reference}.pdf`, documentId: doc.id });
+      if (result.canceled) return;
+      if (result.success) toast.success(`PDF enregistré : ${result.path}`);
+      else toast.error(`Erreur PDF : ${result.error ?? 'inconnue'}`);
+    } catch (err) {
+      toast.error(`Erreur PDF : ${err instanceof Error ? err.message : String(err)}`);
+    }
+  }
+
+  async function exportExcel() {
+    try {
+      const result = await api.documents.generateExcel({
+        documentId: doc.id,
+        doc: {
+          type: doc.type,
+          reference: doc.reference,
+          date: doc.date,
+          validity: doc.validity,
+          notes: doc.notes,
+          lines: doc.lines.map(l => ({ designation: l.designation, reference: l.reference, quantity: l.quantity, price: l.price, vat: l.vat })),
+          amounts: { subtotal: amounts.subtotal, vat: amounts.vat, total: amounts.total },
+        },
+        client: client ? { name: client.name, address: client.address, city: client.city, contact: client.contact, phone: client.phone, email: client.email } : null,
+      });
+      if (result.canceled) return;
+      if (result.success) toast.success(`Excel enregistré : ${result.path}`);
+      else toast.error(`Erreur Excel : ${result.error ?? 'inconnue'}`);
+    } catch (err) {
+      toast.error(`Erreur Excel : ${err instanceof Error ? err.message : String(err)}`);
+    }
+  }
+
   return <>
     <Button variant="ghost" className="-ml-3 mb-5 h-7 text-muted-foreground text-[11px]" asChild><Link to="/documents"><ArrowLeft />Tous les documents</Link></Button>
     <div className="page-heading"><div><div className="flex items-center gap-3 mb-2"><h1 className="!mb-0">{doc.reference}</h1><StatusBadge status={doc.status} /></div><p>{doc.type} · Créé le {shortDate(doc.date)} · {client?.name}</p></div></div>
-    <div className="flex gap-2 mb-6 detail-actions"><Button size="sm" onClick={() => setEditor(doc)}><Pencil />Modifier</Button><Button variant="outline" size="sm" onClick={() => duplicate(doc)}><Copy />Dupliquer</Button><DropdownMenu><DropdownMenuTrigger asChild><Button variant="outline" size="sm">Changer l’état<ChevronDown /></Button></DropdownMenuTrigger><DropdownMenuContent>{statuses.filter(s => s !== doc.status).map(s => <DropdownMenuItem key={s} onSelect={() => changeStatus(doc.id, s)}>{s}</DropdownMenuItem>)}</DropdownMenuContent></DropdownMenu>{doc.status !== 'Archivé' && <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={() => setArchiveId(doc.id)}><Archive />Archiver</Button>}{doc.status !== 'Finalisé' && doc.status !== 'Archivé' && <Button variant="outline" size="sm" className="ml-auto" onClick={() => setFinalize(doc)}><Check />Finaliser</Button>}</div>
-    <div className="detail-grid"><section className="detail-document"><div className="detail-document-top"><div><div className="text-xs font-extrabold text-primary mb-2">FLOW MASTER.</div><p className="text-[10px] text-muted-foreground">Bureau d’études de pompage · Démonstration</p></div><div className="text-right"><h2>{doc.type}</h2><p className="text-xs text-muted-foreground mt-2">{doc.reference}</p></div></div><div className="detail-meta"><div><div className="meta-label">Client</div><strong>{client?.name}</strong><p>{client?.address}</p><p className="text-muted-foreground">{client?.contact}</p></div><div><div className="meta-label">Informations</div><p>Date : {shortDate(doc.date)}</p>{doc.type === 'Devis' && <p>Valable jusqu’au : {shortDate(expiry.toISOString())} ({doc.validity} jours)</p>}<p>Devise : Dinar algérien (DA)</p><p className="text-muted-foreground">Document fictif · Sans valeur commerciale</p></div></div><div className="table-scroll"><table className="document-table"><thead><tr><th>Désignation / Référence</th><th>Qté</th><th>Prix unitaire HT</th><th>TVA</th><th>Total HT</th></tr></thead><tbody>{doc.lines.map(l => <tr key={l.id}><td><span className="font-medium">{l.designation}</span><p className="text-[10px] text-muted-foreground mt-1">{l.reference}</p></td><td>{l.quantity}</td><td>{money(l.price)}</td><td>{l.vat} %</td><td className="font-medium">{money(l.quantity * l.price)}</td></tr>)}</tbody></table></div><div className="total-summary"><div><span className="text-muted-foreground">Sous-total HT</span>{money(amounts.subtotal)}</div><div><span className="text-muted-foreground">TVA</span>{money(amounts.vat)}</div><div className="grand-total"><span>Total TTC</span><span className="text-primary">{money(amounts.total)}</span></div></div>{doc.notes && <div className="mt-8 border-t pt-5"><h3 className="text-xs font-medium mb-2">Notes et conditions</h3><p className="text-xs text-muted-foreground whitespace-pre-wrap leading-6">{doc.notes}</p></div>}</section><aside><div className="section-heading"><h2>Historique du document</h2></div><ActivityList events={state.events.filter(e => e.documentId === doc.id)} /><div className="text-[10px] text-muted-foreground leading-6 border-t mt-5 pt-4">Dernière modification : {shortDate(doc.modified)}<br />Par Administrateur · Profil fictif</div></aside></div>
+    <div className="flex flex-wrap gap-2 mb-6 detail-actions">
+      <Button size="sm" onClick={() => setEditor(doc)}><Pencil />Modifier</Button>
+      <Button variant="outline" size="sm" onClick={() => duplicate(doc)}><Copy />Dupliquer</Button>
+      <Button variant="outline" size="sm" onClick={exportPdf}><Download />Exporter en PDF</Button>
+      <Button variant="outline" size="sm" onClick={exportExcel}><FileSpreadsheet />Exporter en Excel</Button>
+      <DropdownMenu><DropdownMenuTrigger asChild><Button variant="outline" size="sm">Changer l'état<ChevronDown /></Button></DropdownMenuTrigger><DropdownMenuContent>{statuses.filter(s => s !== doc.status).map(s => <DropdownMenuItem key={s} onSelect={() => changeStatus(doc.id, s)}>{s}</DropdownMenuItem>)}</DropdownMenuContent></DropdownMenu>
+      {doc.status !== 'Archivé' && <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={() => setArchiveId(doc.id)}><Archive />Archiver</Button>}
+      {doc.status !== 'Finalisé' && doc.status !== 'Archivé' && <Button variant="outline" size="sm" className="ml-auto" onClick={() => setFinalize(doc)}><Check />Finaliser</Button>}
+    </div>
+    <div className="detail-grid"><section className="detail-document"><div className="detail-document-top"><div><div className="text-xs font-extrabold text-primary mb-2">FLOW MASTER.</div><p className="text-[10px] text-muted-foreground">Bureau d'études de pompage</p></div><div className="text-right"><h2>{doc.type}</h2><p className="text-xs text-muted-foreground mt-2">{doc.reference}</p></div></div><div className="detail-meta"><div><div className="meta-label">Client</div><strong>{client?.name}</strong><p>{client?.address}</p><p className="text-muted-foreground">{client?.contact}</p></div><div><div className="meta-label">Informations</div><p>Date : {shortDate(doc.date)}</p>{doc.type === 'Devis' && <p>Valable jusqu'au : {shortDate(expiry.toISOString())} ({doc.validity} jours)</p>}<p>Devise : Dinar algérien (DA)</p></div></div><div className="table-scroll"><table className="document-table"><thead><tr><th>Désignation / Référence</th><th>Qté</th><th>Prix unitaire HT</th><th>TVA</th><th>Total HT</th></tr></thead><tbody>{doc.lines.map(l => <tr key={l.id}><td><span className="font-medium">{l.designation}</span><p className="text-[10px] text-muted-foreground mt-1">{l.reference}</p></td><td>{l.quantity}</td><td>{money(l.price)}</td><td>{l.vat} %</td><td className="font-medium">{money(l.quantity * l.price)}</td></tr>)}</tbody></table></div><div className="total-summary"><div><span className="text-muted-foreground">Sous-total HT</span>{money(amounts.subtotal)}</div><div><span className="text-muted-foreground">TVA</span>{money(amounts.vat)}</div><div className="grand-total"><span>Total TTC</span><span className="text-primary">{money(amounts.total)}</span></div></div>{doc.notes && <div className="mt-8 border-t pt-5"><h3 className="text-xs font-medium mb-2">Notes et conditions</h3><p className="text-xs text-muted-foreground whitespace-pre-wrap leading-6">{doc.notes}</p></div>}</section><aside><div className="section-heading"><h2>Historique du document</h2></div><ActivityList events={state.events.filter(e => e.documentId === doc.id)} /><div className="text-[10px] text-muted-foreground leading-6 border-t mt-5 pt-4">Dernière modification : {shortDate(doc.modified)}<br />Par Administrateur</div></aside></div>
   </>;
 }

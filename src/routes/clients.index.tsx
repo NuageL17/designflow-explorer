@@ -3,11 +3,11 @@ import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
 import { Search, MapPin, ArrowRight, Building2, UserPlus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import { clients, totals, money } from '@/lib/demo-data';
+import { totals, money } from '@/lib/demo-data';
 import { useDemo } from '@/components/demo-provider';
 import { pageHead } from '@/lib/page-head';
 
-export const Route = createFileRoute('/clients/')({ head: () => pageHead('Clients', 'Portefeuille clients FLOW MASTER : ajoutez des clients et consultez leurs achats et factures.'), component: ClientsPage });
+export const Route = createFileRoute('/clients/')({ head: () => pageHead('Clients', 'Portefeuille clients FLOW MASTER.'), component: ClientsPage });
 
 const empty = { name: '', city: '', sector: '', address: '', contact: '', phone: '', email: '' };
 
@@ -18,12 +18,13 @@ function ClientsPage() {
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState(empty);
   const [error, setError] = useState('');
-  const list = clients.filter(c => `${c.name} ${c.city} ${c.sector}`.toLowerCase().includes(search.toLowerCase()));
+  const allClients = state.clients ?? [];
+  const list = allClients.filter(c => `${c.name} ${c.city} ${c.sector}`.toLowerCase().includes(search.toLowerCase()));
   const spent = (id: string) => state.documents.filter(d => d.clientId === id && d.type === 'Facture' && d.status !== 'Brouillon').reduce((a, d) => a + totals(d.lines).total, 0);
-  function submit(e: React.FormEvent) {
+  async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!form.name.trim() || !form.city.trim()) { setError('Le nom et la ville sont obligatoires.'); return; }
-    const id = addClient({ ...form, name: form.name.trim(), city: form.city.trim(), sector: form.sector.trim() || 'Non renseigné', address: form.address.trim() || form.city.trim(), contact: form.contact.trim() || 'Non renseigné' });
+    const id = await addClient({ ...form, name: form.name.trim(), city: form.city.trim(), sector: form.sector.trim() || 'Non renseigné', address: form.address.trim() || form.city.trim(), contact: form.contact.trim() || 'Non renseigné' });
     setOpen(false); setForm(empty); setError('');
     navigate({ to: '/clients/$id', params: { id } });
   }
@@ -38,9 +39,9 @@ function ClientsPage() {
     </Link>)}</div>
     {!list.length && <div className="empty-state"><Building2 size={32} /><h3>Aucun client trouvé</h3><p>Essayez un autre nom ou ajoutez un nouveau client.</p></div>}
     <Dialog open={open} onOpenChange={setOpen}><DialogContent>
-      <DialogTitle>Nouveau client</DialogTitle><DialogDescription>Le client sera enregistré dans la démonstration.</DialogDescription>
+      <DialogTitle>Nouveau client</DialogTitle><DialogDescription>Renseignez les informations du client. Il sera ajouté à votre portefeuille.</DialogDescription>
       <form onSubmit={submit} className="grid gap-3">
-        {field('name', 'Nom de l’entreprise *', 'Ex. Hydro Sud Démo')}
+        {field('name', 'Nom de l\'entreprise *', 'Ex. Hydro Sud')}
         <div className="grid grid-cols-2 gap-3">{field('city', 'Ville *', 'Ex. Ouargla')}{field('sector', 'Secteur', 'Ex. Irrigation')}</div>
         {field('address', 'Adresse')}
         <div className="grid grid-cols-2 gap-3">{field('contact', 'Contact')}{field('phone', 'Téléphone')}</div>

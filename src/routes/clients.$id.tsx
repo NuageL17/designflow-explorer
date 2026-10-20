@@ -1,17 +1,17 @@
 import { createFileRoute, Link } from '@tanstack/react-router';
 import { ArrowLeft, FileText, Receipt, Truck, MapPin, Phone, Mail, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { clients, totals, money, shortDate } from '@/lib/demo-data';
+import { totals, money, shortDate } from '@/lib/demo-data';
 import { useDemo } from '@/components/demo-provider';
 import { DocumentTable } from '@/components/document-table';
 import { pageHead } from '@/lib/page-head';
 
-export const Route = createFileRoute('/clients/$id')({ head: () => pageHead('Fiche client', 'Achats, factures, devis et bons de livraison d’un client FLOW MASTER.'), component: ClientDetail });
+export const Route = createFileRoute('/clients/$id')({ head: () => pageHead('Fiche client', 'Achats, factures, devis et bons de livraison d\'un client FLOW MASTER.'), component: ClientDetail });
 
 function ClientDetail() {
   const { id } = Route.useParams();
   const { state, create } = useDemo();
-  const client = clients.find(c => c.id === id);
+  const client = (state.clients ?? []).find(c => c.id === id);
   if (!client) return <div className="empty-state"><h3>Client introuvable</h3><Button asChild size="sm"><Link to="/clients">Retour aux clients</Link></Button></div>;
   const docs = state.documents.filter(d => d.clientId === id).sort((a, b) => b.date.localeCompare(a.date));
   const invoices = docs.filter(d => d.type === 'Facture' && d.status !== 'Brouillon');
@@ -42,7 +42,7 @@ function ClientDetail() {
           <p className="flex gap-2"><Phone size={14} className="text-muted-foreground shrink-0" />{client.phone || 'Non renseigné'}</p>
           <p className="flex gap-2"><Mail size={14} className="text-muted-foreground shrink-0" />{client.email || 'Non renseigné'}</p></section>
         <section className="surface p-4 text-xs"><h2 className="text-sm font-semibold mb-3">Matériel acheté</h2>
-          {top.length ? <ul className="space-y-2">{top.map(t => <li key={t.designation} className="flex justify-between gap-2 border-b pb-2 last:border-0"><span>{t.designation}<span className="block text-[10px] text-muted-foreground">Qté {t.qty}</span></span><strong className="whitespace-nowrap">{money(t.amount)}</strong></li>)}</ul> : <p className="text-muted-foreground">Aucune facture pour l’instant.</p>}</section>
+          {top.length ? <ul className="space-y-2">{top.map(t => <li key={t.designation} className="flex justify-between gap-2 border-b pb-2 last:border-0"><span>{t.designation}<span className="block text-[10px] text-muted-foreground">Qté {t.qty}</span></span><strong className="whitespace-nowrap">{money(t.amount)}</strong></li>)}</ul> : <p className="text-muted-foreground">Aucune facture pour l'instant.</p>}</section>
       </aside>
     </div>
   </>;
