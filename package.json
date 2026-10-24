@@ -1,5 +1,6 @@
 {
   "name": "flow-master",
+  "version": "1.0.0",
   "private": true,
   "main": "dist-electron/main.js",
   "sideEffects": false,
@@ -19,7 +20,7 @@
   },
   "build": {
     "appId": "com.flowmaster.app",
-    "productName": "Flow Master",
+    "productName": "FLOW Document Management System",
     "files": [
       "dist/**/*",
       "dist-electron/**/*"
