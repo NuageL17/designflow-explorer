@@ -1,38 +1,42 @@
-import { defineConfig } from "@lovable.dev/vite-tanstack-config";
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+import { tanstackStart } from '@tanstack/react-start/plugin/vite';
+import tsconfigPaths from 'vite-tsconfig-paths';
+import tailwindcss from '@tailwindcss/vite';
 import electron from 'vite-plugin-electron/simple';
 
 export default defineConfig({
-  vite: {
-    base: './',
-    plugins: [
-      electron({
-        main: {
-          entry: 'electron/main.ts',
-          vite: {
-            build: {
-              rollupOptions: {
-                external: ['better-sqlite3', 'electron', 'exceljs'],
-              },
+  base: './',
+  plugins: [
+    tsconfigPaths(),
+    tailwindcss(),
+    tanstackStart({
+      spa: {
+        enabled: true,
+      },
+    }),
+    react(),
+    electron({
+      main: {
+        entry: 'electron/main.ts',
+        vite: {
+          build: {
+            rollupOptions: {
+              external: ['better-sqlite3', 'electron', 'exceljs'],
             },
           },
         },
-        preload: {
-          input: 'electron/preload.ts',
-          vite: {
-            build: {
-              rollupOptions: {
-                external: ['electron'],
-              },
+      },
+      preload: {
+        input: 'electron/preload.ts',
+        vite: {
+          build: {
+            rollupOptions: {
+              external: ['electron'],
             },
           },
         },
-      }),
-    ],
-  },
-  tanstackStart: {
-    server: { entry: "server" },
-  },
-  nitro: {
-    preset: 'node-server',
-  },
+      },
+    }),
+  ],
 });

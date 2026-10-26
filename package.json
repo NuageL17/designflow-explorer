@@ -20,17 +20,35 @@
   },
   "build": {
     "appId": "com.flowmaster.app",
-    "productName": "FLOW Document Management System",
+    "productName": "Flow Master",
+    "asar": false,
+    "directories": {
+      "output": "release"
+    },
     "files": [
       "dist/**/*",
-      "dist-electron/**/*"
+      "dist-electron/**/*",
+      "package.json"
     ],
     "extraResources": [
-      { "from": "electron/db/migrations", "to": "migrations" }
+      {
+        "from": "electron/db/migrations",
+        "to": "migrations"
+      }
     ],
-    "win": { "target": "nsis" }
+    "win": {
+      "target": "nsis"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    }
   },
-  "overrides": { "rolldown": "1.2.1" },
+  "overrides": {
+    "rolldown": "1.2.1"
+  },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
     "@radix-ui/react-accordion": "^1.2.12",
@@ -107,6 +125,7 @@
     "globals": "^15.15.0",
     "jsdom": "^20.0.3",
     "nitro": "3.0.260603-beta",
+    "node-gyp": "^13.1.0",
     "prettier": "^3.7.3",
     "typescript": "^5.8.3",
     "typescript-eslint": "^8.56.1",

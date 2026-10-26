@@ -1,7 +1,7 @@
-import { app, BrowserWindow, ipcMain, dialog, shell } from 'electron';
+import { app, BrowserWindow, ipcMain, dialog, shell, Menu, protocol, net } from 'electron';
 import path from 'node:path';
 import fs from 'node:fs';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { randomUUID } from 'node:crypto';
 import { getDb, runMigrations, closeDb } from './db/index';
 import { computeFileHash, recordExportedFile, getFileById, setFileDecision, markFileMissing } from './db/files';
@@ -17,7 +17,15 @@ const __dirname = path.dirname(__filename);
 const isDev = !app.isPackaged;
 let isQuitting = false;
 
+// 1. DÉCLARATION DU PROTOCOLE (doit être fait avant app.whenReady)
+protocol.registerSchemesAsPrivileged([
+  { scheme: 'app', privileges: { secure: true, standard: true, supportFetchAPI: true } }
+]);
+
 function createWindow(startHidden = false) {
+  // Supprime la barre de menu
+  Menu.setApplicationMenu(null);
+
   const win = new BrowserWindow({
     width: 1280,
     height: 800,
@@ -40,7 +48,9 @@ function createWindow(startHidden = false) {
       }
     });
   } else {
-    win.loadFile(path.join(__dirname, '../dist/index.html'));
+    // CHARGEMENT VIA LE PROTOCOLE (corrige l'écran blanc)
+    win.loadURL('app://./');
+    // On ouvre les DevTools pour vérifier qu'il n'y a plus d'erreurs
   }
 
   win.on('close', (event) => {
@@ -192,7 +202,6 @@ function registerIpcHandlers() {
           hash: computeFileHash(result.path), sizeBytes: stat.size,
         });
         fileWatcher.refresh();
-        console.log(`📎 Fichier Excel sous surveillance : ${result.path}`);
       } catch (err) { console.error('Erreur suivi Excel :', err); }
     }
     return result;
@@ -251,11 +260,22 @@ function registerIpcHandlers() {
 }
 
 app.whenReady().then(() => {
+  // 2. ENREGISTREMENT DU PROTOCOLE POUR SERVIR LES FICHIERS LOCAUX
+  protocol.handle('app', (request) => {
+    const url = new URL(request.url);
+    let pathName = url.pathname;
+    if (pathName === '/' || pathName === '/index.html') {
+      pathName = '/_shell.html';
+    }
+    // On pointe vers le dossier dist/client généré par Vite
+    const filePath = path.join(__dirname, '../dist/client', pathName);
+    return net.fetch(pathToFileURL(filePath).toString());
+  });
+
   try {
     runMigrations();
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
-    console.error('❌ Erreur critique de migration :', err);
     dialog.showErrorBox('Erreur critique — Flow Master', `Impossible d'initialiser la base.\n\n${message}`);
     app.exit(1);
     return;
@@ -265,8 +285,7 @@ app.whenReady().then(() => {
     registerIpcHandlers();
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
-    console.error('❌ Erreur IPC :', err);
-    dialog.showErrorBox('Erreur critique — Flow Master', `Impossible de démarrer les services internes.\n\n${message}`);
+    dialog.showErrorBox('Erreur critique — Flow Master', `Impossible de démarrer les services.\n\n${message}`);
     app.exit(1);
     return;
   }
