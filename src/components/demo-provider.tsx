@@ -1,14 +1,21 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
-import { toast } from 'sonner';
-import { api } from '@/lib/api';
-import { dbClientToReact, dbDocumentToReact, reactDocumentToDb } from '@/lib/mappers';
+import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { toast } from "sonner";
+import { api } from "@/lib/api";
+import { dbClientToReact, dbDocumentToReact, reactDocumentToDb } from "@/lib/mappers";
 import {
-  initialState, syncReferences, initialsFor,
+  initialState,
+  syncReferences,
+  initialsFor,
   clients as clientsRef,
-  makeLine, referenceFor,
-  type Client, type Product, type CommercialDocument,
-  type DemoState, type DocumentType, type Status,
-} from '@/lib/demo-data';
+  makeLine,
+  referenceFor,
+  type Client,
+  type Product,
+  type CommercialDocument,
+  type DemoState,
+  type DocumentType,
+  type Status,
+} from "@/lib/demo-data";
 
 type DemoContextValue = {
   state: DemoState;
@@ -27,7 +34,7 @@ type DemoContextValue = {
   settings: boolean;
   setSettings: (open: boolean) => void;
   reset: () => void;
-  addClient: (client: Omit<Client, 'id' | 'initials'>) => Promise<string>;
+  addClient: (client: Omit<Client, "id" | "initials">) => Promise<string>;
   saveProduct: (product: Product, isNew: boolean) => void;
   adjustStock: (reference: string, delta: number) => void;
 };
@@ -44,24 +51,21 @@ export function DemoProvider({ children }: { children: ReactNode }) {
 
   async function loadFromDb() {
     try {
-      const [clientsRaw, docsRaw] = await Promise.all([
-        api.clients.list(),
-        api.documents.list(),
-      ]);
+      const [clientsRaw, docsRaw] = await Promise.all([api.clients.list(), api.documents.list()]);
       const reactClients = (clientsRaw as never[]).map(dbClientToReact);
       const fullDocs = await Promise.all(
-        (docsRaw as { id: string }[]).map(d => api.documents.get(d.id)),
+        (docsRaw as { id: string }[]).map((d) => api.documents.get(d.id)),
       );
-      const reactDocs = fullDocs.filter(Boolean).map(d => dbDocumentToReact(d as never));
+      const reactDocs = fullDocs.filter(Boolean).map((d) => dbDocumentToReact(d as never));
 
       clientsRef.splice(0, clientsRef.length, ...reactClients);
       syncReferences({ clients: reactClients, documents: reactDocs, events: [] });
 
-      const events = reactDocs.map(d => ({
+      const events = reactDocs.map((d) => ({
         id: `evt-${d.id}`,
         documentId: d.id,
         reference: d.reference,
-        action: 'Document enregistré',
+        action: "Document enregistré",
         date: d.modified,
       }));
 
@@ -73,8 +77,8 @@ export function DemoProvider({ children }: { children: ReactNode }) {
         events,
       });
     } catch (err) {
-      console.error('Erreur de chargement :', err);
-      toast.error('Impossible de charger les données.');
+      console.error("Erreur de chargement :", err);
+      toast.error("Impossible de charger les données.");
     }
   }
 
@@ -84,7 +88,9 @@ export function DemoProvider({ children }: { children: ReactNode }) {
       await loadFromDb();
       if (mounted) setLoading(false);
     })();
-    return () => { mounted = false; };
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   async function refreshFromDb() {
@@ -94,39 +100,42 @@ export function DemoProvider({ children }: { children: ReactNode }) {
   async function save(doc: CommercialDocument, status: Status) {
     const now = new Date().toISOString();
     const next = { ...doc, status, modified: now };
-    const clientSnapshot = (state.clients ?? []).find(c => c.id === doc.clientId) ?? null;
+    const clientSnapshot = (state.clients ?? []).find((c) => c.id === doc.clientId) ?? null;
     const payload = reactDocumentToDb(next, clientSnapshot);
 
     try {
       await api.documents.save(payload);
     } catch (err) {
-      console.error('Erreur enregistrement :', err);
+      console.error("Erreur enregistrement :", err);
       toast.error("Échec de l'enregistrement.");
       return;
     }
 
-    setState(prev => {
-      const existing = prev.documents.find(d => d.id === doc.id);
+    setState((prev) => {
+      const existing = prev.documents.find((d) => d.id === doc.id);
       return {
         ...prev,
         documents: existing
-          ? prev.documents.map(d => (d.id === doc.id ? next : d))
+          ? prev.documents.map((d) => (d.id === doc.id ? next : d))
           : [next, ...prev.documents],
-        events: [{
-          id: crypto.randomUUID(),
-          documentId: doc.id,
-          reference: doc.reference,
-          action: existing ? 'Document modifié' : 'Document créé',
-          date: now,
-        }, ...prev.events],
+        events: [
+          {
+            id: crypto.randomUUID(),
+            documentId: doc.id,
+            reference: doc.reference,
+            action: existing ? "Document modifié" : "Document créé",
+            date: now,
+          },
+          ...prev.events,
+        ],
       };
     });
 
     setEditor(null);
-    toast.success(status === 'Finalisé' ? 'Document finalisé.' : `Document enregistré · ${status}`);
+    toast.success(status === "Finalisé" ? "Document finalisé." : `Document enregistré · ${status}`);
   }
 
-  function create(type: DocumentType = 'Devis', clientId = '') {
+  function create(type: DocumentType = "Devis", clientId = "") {
     setEditor({
       id: crypto.randomUUID(),
       reference: referenceFor(type, state.documents),
@@ -134,18 +143,18 @@ export function DemoProvider({ children }: { children: ReactNode }) {
       clientId,
       date: new Date().toISOString().slice(0, 10),
       validity: 30,
-      status: 'Brouillon',
+      status: "Brouillon",
       lines: [makeLine()],
-      notes: '',
+      notes: "",
       modified: new Date().toISOString(),
     });
   }
 
   function changeStatus(id: string, status: Status) {
-    const doc = state.documents.find(d => d.id === id);
+    const doc = state.documents.find((d) => d.id === id);
     if (!doc) return;
-    if (status === 'Finalisé') setFinalize(doc);
-    else if (status === 'Archivé') setArchiveId(id);
+    if (status === "Finalisé") setFinalize(doc);
+    else if (status === "Archivé") setArchiveId(id);
     else save(doc, status);
   }
 
@@ -154,11 +163,11 @@ export function DemoProvider({ children }: { children: ReactNode }) {
       ...doc,
       id: crypto.randomUUID(),
       reference: referenceFor(doc.type, state.documents),
-      status: 'Brouillon',
+      status: "Brouillon",
       date: new Date().toISOString().slice(0, 10),
-      lines: doc.lines.map(l => ({ ...l, id: crypto.randomUUID() })),
+      lines: doc.lines.map((l) => ({ ...l, id: crypto.randomUUID() })),
     });
-    toast.info('Copie préparée.');
+    toast.info("Copie préparée.");
   }
 
   function reset() {
@@ -170,7 +179,7 @@ export function DemoProvider({ children }: { children: ReactNode }) {
     window.location.reload();
   }
 
-  async function addClient(data: Omit<Client, 'id' | 'initials'>): Promise<string> {
+  async function addClient(data: Omit<Client, "id" | "initials">): Promise<string> {
     const payload = {
       name: data.name,
       initials: initialsFor(data.name),
@@ -184,25 +193,41 @@ export function DemoProvider({ children }: { children: ReactNode }) {
     const raw = await api.clients.create(payload);
     const client = dbClientToReact(raw as never);
     clientsRef.push(client);
-    setState(prev => ({ ...prev, clients: [...(prev.clients ?? []), client] }));
+    setState((prev) => ({ ...prev, clients: [...(prev.clients ?? []), client] }));
     toast.success(`Client ajouté · ${client.name}`);
     return client.id;
   }
 
   function saveProduct(_product: Product, _isNew: boolean) {
-    toast.info('Catalogue non connecté en V1.');
+    toast.info("Catalogue non connecté en V1.");
   }
 
-  function adjustStock(_reference: string, _delta: number) { /* non connecté */ }
+  function adjustStock(_reference: string, _delta: number) {
+    /* non connecté */
+  }
 
   return (
     <DemoContext.Provider
       value={{
-        state, loading, refreshFromDb,
-        editor, setEditor, create, save, changeStatus, duplicate,
-        finalize, setFinalize, archiveId, setArchiveId,
-        settings, setSettings, reset,
-        addClient, saveProduct, adjustStock,
+        state,
+        loading,
+        refreshFromDb,
+        editor,
+        setEditor,
+        create,
+        save,
+        changeStatus,
+        duplicate,
+        finalize,
+        setFinalize,
+        archiveId,
+        setArchiveId,
+        settings,
+        setSettings,
+        reset,
+        addClient,
+        saveProduct,
+        adjustStock,
       }}
     >
       {children}
@@ -212,6 +237,6 @@ export function DemoProvider({ children }: { children: ReactNode }) {
 
 export function useDemo() {
   const ctx = useContext(DemoContext);
-  if (!ctx) throw new Error('DemoProvider is required');
+  if (!ctx) throw new Error("DemoProvider is required");
   return ctx;
 }

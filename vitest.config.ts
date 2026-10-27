@@ -1,39 +1,39 @@
-import { defineConfig } from 'vite';
-import react from '@vitejs/plugin-react';
-import { tanstackStart } from '@tanstack/react-start/plugin/vite';
-import tsconfigPaths from 'vite-tsconfig-paths';
-import tailwindcss from '@tailwindcss/vite';
-import electron from 'vite-plugin-electron/simple';
+import { defineConfig } from "vite";
+import react from "@vitejs/plugin-react";
+import { tanstackStart } from "@tanstack/react-start/plugin/vite";
+import tsconfigPaths from "vite-tsconfig-paths";
+import tailwindcss from "@tailwindcss/vite";
+import electron from "vite-plugin-electron/simple";
 
 export default defineConfig({
-  base: './',
+  base: "./",
   plugins: [
     tsconfigPaths(),
     tailwindcss(),
     // On utilise le plugin officiel TanStack Start en mode SPA (Single Page Application)
     tanstackStart({
       spa: {
-        enabled: true, 
+        enabled: true,
       },
     }),
     react(),
     electron({
       main: {
-        entry: 'electron/main.ts',
+        entry: "electron/main.ts",
         vite: {
           build: {
             rollupOptions: {
-              external: ['better-sqlite3', 'electron', 'exceljs'],
+              external: ["better-sqlite3", "electron", "exceljs"],
             },
           },
         },
       },
       preload: {
-        input: 'electron/preload.ts',
+        input: "electron/preload.ts",
         vite: {
           build: {
             rollupOptions: {
-              external: ['electron'],
+              external: ["electron"],
             },
           },
         },

@@ -1,5 +1,5 @@
-import { BrowserWindow, dialog } from 'electron';
-import fs from 'node:fs/promises';
+import { BrowserWindow, dialog } from "electron";
+import fs from "node:fs/promises";
 
 export async function generatePdf(
   html: string,
@@ -11,22 +11,22 @@ export async function generatePdf(
   });
 
   try {
-    const dataUrl = 'data:text/html;charset=utf-8,' + encodeURIComponent(html);
+    const dataUrl = "data:text/html;charset=utf-8," + encodeURIComponent(html);
     await win.loadURL(dataUrl);
 
     // Laisse le temps au rendu (polices, mise en page) de se stabiliser
-    await new Promise(r => setTimeout(r, 400));
+    await new Promise((r) => setTimeout(r, 400));
 
     const pdfBuffer = await win.webContents.printToPDF({
-      pageSize: 'A4',
+      pageSize: "A4",
       printBackground: true,
       margins: { top: 0.4, bottom: 0.4, left: 0.4, right: 0.4 },
     });
 
     const { canceled, filePath } = await dialog.showSaveDialog({
-      title: 'Enregistrer le PDF',
+      title: "Enregistrer le PDF",
       defaultPath: defaultFileName,
-      filters: [{ name: 'PDF', extensions: ['pdf'] }],
+      filters: [{ name: "PDF", extensions: ["pdf"] }],
     });
 
     if (canceled || !filePath) return { success: false, canceled: true };

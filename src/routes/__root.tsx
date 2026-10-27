@@ -15,6 +15,24 @@ import { DemoProvider } from '@/components/demo-provider';
 import { Workspace } from '@/components/workspace';
 import { Toaster } from '@/components/ui/sonner';
 
+// --- SYSTÈME DE LOG FRONTEND ---
+if (typeof window !== 'undefined' && window.api?.log) {
+  const originalError = console.error;
+  console.error = (...args) => {
+    originalError(...args);
+    window.api.log(args.map(a => String(a)).join(' '), 'ERROR');
+  };
+
+  window.addEventListener('error', (event) => {
+    window.api?.log(`Uncaught Error: ${event.message} at ${event.filename}:${event.lineno}`, 'FATAL');
+  });
+
+  window.addEventListener('unhandledrejection', (event) => {
+    window.api?.log(`Unhandled Rejection: ${event.reason}`, 'FATAL');
+  });
+}
+// -------------------------------
+
 function NotFoundComponent() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
@@ -77,12 +95,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "FLOW MASTER · Gestion commerciale" },
-      { name: "description", content: "Logiciel de gestion commerciale pour les bureaux d'études de pompage." },
-      { property: "og:title", content: "FLOW MASTER · Gestion commerciale" },
-      { property: "og:description", content: "Gérez vos devis, factures et bons de livraison." },
-      { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary_large_image" },
+      { title: "Flow Master · Gestion commerciale" },
+      { name: "description", content: "Logiciel de gestion commerciale." },
     ],
     links: [
       { rel: "stylesheet", href: appCss },

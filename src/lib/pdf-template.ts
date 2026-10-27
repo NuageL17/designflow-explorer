@@ -1,13 +1,13 @@
-import type { Client, CommercialDocument } from '@/lib/demo-data';
-import { totals, money, shortDate } from '@/lib/demo-data';
+import type { Client, CommercialDocument } from "@/lib/demo-data";
+import { totals, money, shortDate } from "@/lib/demo-data";
 
 function escapeHtml(s: string | undefined | null): string {
-  if (!s) return '';
+  if (!s) return "";
   return String(s)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
 }
 
 export function buildDocumentHtml(
@@ -24,7 +24,7 @@ export function buildDocumentHtml(
         <td class="col-num">${i + 1}</td>
         <td>
           <div class="line-designation">${escapeHtml(l.designation)}</div>
-          ${l.reference ? `<div class="line-ref">Réf. ${escapeHtml(l.reference)}</div>` : ''}
+          ${l.reference ? `<div class="line-ref">Réf. ${escapeHtml(l.reference)}</div>` : ""}
         </td>
         <td class="col-num">${l.quantity}</td>
         <td class="col-money">${money(l.price)}</td>
@@ -32,7 +32,7 @@ export function buildDocumentHtml(
         <td class="col-money">${money(l.quantity * l.price)}</td>
       </tr>`,
     )
-    .join('');
+    .join("");
 
   return `<!DOCTYPE html>
 <html lang="fr">
@@ -110,17 +110,17 @@ export function buildDocumentHtml(
   <div class="meta-grid">
     <div class="meta-block">
       <h3>Client</h3>
-      <p><strong>${escapeHtml(client?.name ?? '—')}</strong></p>
-      ${client?.address ? `<p>${escapeHtml(client.address)}</p>` : ''}
-      ${client?.city ? `<p>${escapeHtml(client.city)}</p>` : ''}
-      ${client?.contact ? `<p>Contact : ${escapeHtml(client.contact)}</p>` : ''}
-      ${client?.phone ? `<p>Tél. : ${escapeHtml(client.phone)}</p>` : ''}
-      ${client?.email ? `<p>${escapeHtml(client.email)}</p>` : ''}
+      <p><strong>${escapeHtml(client?.name ?? "—")}</strong></p>
+      ${client?.address ? `<p>${escapeHtml(client.address)}</p>` : ""}
+      ${client?.city ? `<p>${escapeHtml(client.city)}</p>` : ""}
+      ${client?.contact ? `<p>Contact : ${escapeHtml(client.contact)}</p>` : ""}
+      ${client?.phone ? `<p>Tél. : ${escapeHtml(client.phone)}</p>` : ""}
+      ${client?.email ? `<p>${escapeHtml(client.email)}</p>` : ""}
     </div>
     <div class="meta-block">
       <h3>Informations</h3>
       <p><strong>Date :</strong> ${shortDate(doc.date)}</p>
-      ${doc.type === 'Devis' ? `<p><strong>Validité :</strong> ${doc.validity} jours</p>` : ''}
+      ${doc.type === "Devis" ? `<p><strong>Validité :</strong> ${doc.validity} jours</p>` : ""}
       <p><strong>Devise :</strong> Dinar algérien (DA)</p>
     </div>
   </div>
@@ -147,7 +147,7 @@ export function buildDocumentHtml(
     </div>
   </div>
 
-  ${doc.notes ? `<div class="notes"><h3>Notes et conditions</h3><p>${escapeHtml(doc.notes)}</p></div>` : ''}
+  ${doc.notes ? `<div class="notes"><h3>Notes et conditions</h3><p>${escapeHtml(doc.notes)}</p></div>` : ""}
 </div>
 
 <div class="footer">

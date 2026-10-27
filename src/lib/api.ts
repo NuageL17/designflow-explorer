@@ -1,12 +1,12 @@
 function getApi() {
-  if (typeof window !== 'undefined' && window.api) return window.api;
+  if (typeof window !== "undefined" && window.api) return window.api;
   return null;
 }
 
 export const api = {
   ping: async () => {
     const a = getApi();
-    if (!a) return 'pong (browser)';
+    if (!a) return "pong (browser)";
     return a.ping();
   },
 
@@ -18,7 +18,7 @@ export const api = {
     },
     create: async (payload: unknown): Promise<unknown> => {
       const a = getApi();
-      if (!a) throw new Error('API clients non disponible.');
+      if (!a) throw new Error("API clients non disponible.");
       return a.clients.create(payload);
     },
   },
@@ -36,17 +36,17 @@ export const api = {
     },
     save: async (payload: unknown): Promise<unknown> => {
       const a = getApi();
-      if (!a) throw new Error('API documents non disponible.');
+      if (!a) throw new Error("API documents non disponible.");
       return a.documents.save(payload);
     },
     generatePdf: async (payload: { html: string; fileName: string; documentId?: string }) => {
       const a = getApi();
-      if (!a) throw new Error('API PDF non disponible.');
+      if (!a) throw new Error("API PDF non disponible.");
       return a.documents.generatePdf(payload);
     },
     generateExcel: async (payload: { doc: unknown; client: unknown; documentId?: string }) => {
       const a = getApi();
-      if (!a) throw new Error('API Excel non disponible.');
+      if (!a) throw new Error("API Excel non disponible.");
       return a.documents.generateExcel(payload);
     },
   },
@@ -67,7 +67,10 @@ export const api = {
       if (!a) return;
       a.externalFiles.removeAllListeners();
     },
-    resolve: async (payload: { fileId: string; decision: 'imported' | 'ignored' | 'kept_internal' }) => {
+    resolve: async (payload: {
+      fileId: string;
+      decision: "imported" | "ignored" | "kept_internal";
+    }) => {
       const a = getApi();
       if (!a) return { success: false };
       return a.externalFiles.resolve(payload);
@@ -77,14 +80,25 @@ export const api = {
       if (!a) return { success: false };
       return a.externalFiles.openFile(filePath);
     },
-    previewImport: async (payload: { fileId: string; documentId: string }): Promise<PreviewResult> => {
+    previewImport: async (payload: {
+      fileId: string;
+      documentId: string;
+    }): Promise<PreviewResult> => {
       const a = getApi();
-      if (!a) return { success: false, error: 'API non disponible.', diffs: [], totalChanges: 0, linesAdded: 0, linesRemoved: 0 };
+      if (!a)
+        return {
+          success: false,
+          error: "API non disponible.",
+          diffs: [],
+          totalChanges: 0,
+          linesAdded: 0,
+          linesRemoved: 0,
+        };
       return a.externalFiles.previewImport(payload);
     },
     importExcel: async (payload: { fileId: string; documentId: string }) => {
       const a = getApi();
-      if (!a) return { success: false, error: 'API non disponible.' };
+      if (!a) return { success: false, error: "API non disponible." };
       return a.externalFiles.importExcel(payload);
     },
   },

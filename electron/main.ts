@@ -17,13 +17,23 @@ const __dirname = path.dirname(__filename);
 const isDev = !app.isPackaged;
 let isQuitting = false;
 
-// 1. DÉCLARATION DU PROTOCOLE (doit être fait avant app.whenReady)
+// --- SYSTÈME DE LOG ---
+const logFile = path.join(app.getPath('userData'), 'flow-master-debug.log');
+function log(message: string, data?: any) {
+  const timestamp = new Date().toISOString();
+  const line = `[${timestamp}] ${message} ${data ? JSON.stringify(data) : ''}\n`;
+  try {
+    fs.appendFileSync(logFile, line);
+    console.log(line.trim());
+  } catch (e) { /* ignore */ }
+}
+// ----------------------
+
 protocol.registerSchemesAsPrivileged([
   { scheme: 'app', privileges: { secure: true, standard: true, supportFetchAPI: true } }
 ]);
 
 function createWindow(startHidden = false) {
-  // Supprime la barre de menu
   Menu.setApplicationMenu(null);
 
   const win = new BrowserWindow({
@@ -38,20 +48,25 @@ function createWindow(startHidden = false) {
     },
   });
 
+  win.webContents.on('did-fail-load', (event, errorCode, errorDescription, validatedURL) => {
+    log('❌ ECHEC DE CHARGEMENT', { errorCode, errorDescription, validatedURL });
+  });
+
   if (isDev) {
     win.loadURL('http://localhost:8080');
     if (process.env.FLOW_DEVTOOLS === '1') win.webContents.openDevTools();
-    win.webContents.on('before-input-event', (event, input) => {
-      if (input.control && input.shift && input.key.toLowerCase() === 'i') {
-        win.webContents.toggleDevTools();
-        event.preventDefault();
-      }
-    });
   } else {
-    // CHARGEMENT VIA LE PROTOCOLE (corrige l'écran blanc)
+    log('🚀 CHARGEMENT DE L\'URL : app://./');
     win.loadURL('app://./');
-    // On ouvre les DevTools pour vérifier qu'il n'y a plus d'erreurs
+    // LA CONSOLE N'EST PLUS OUVERTE AUTOMATIQUEMENT
   }
+
+  win.webContents.on('before-input-event', (event, input) => {
+    if (input.control && input.shift && input.key.toLowerCase() === 'i') {
+      win.webContents.toggleDevTools();
+      event.preventDefault();
+    }
+  });
 
   win.on('close', (event) => {
     if (!isQuitting) {
@@ -69,6 +84,11 @@ function quitApp() {
 }
 
 function registerIpcHandlers() {
+  // RÉCEPTEUR DE LOGS VENANT DE REACT
+  ipcMain.on('app:log', (_event, { message, level }) => {
+    log(`🖥️ REACT [${level}] : ${message}`);
+  });
+
   ipcMain.handle('ping', () => 'pong');
 
   ipcMain.handle('clients:list', () => {
@@ -260,15 +280,28 @@ function registerIpcHandlers() {
 }
 
 app.whenReady().then(() => {
-  // 2. ENREGISTREMENT DU PROTOCOLE POUR SERVIR LES FICHIERS LOCAUX
   protocol.handle('app', (request) => {
     const url = new URL(request.url);
     let pathName = url.pathname;
+    
     if (pathName === '/' || pathName === '/index.html') {
       pathName = '/_shell.html';
     }
-    // On pointe vers le dossier dist/client généré par Vite
-    const filePath = path.join(__dirname, '../dist/client', pathName);
+    
+    let filePath = path.join(__dirname, '../dist/client', pathName);
+    
+    if (!fs.existsSync(filePath) && !path.extname(pathName)) {
+      log(`🔄 FALLBACK SPA pour : ${pathName} -> _shell.html`);
+      filePath = path.join(__dirname, '../dist/client', '_shell.html');
+    }
+    
+    log(`📂 PROTOCOLE APP:// DEMANDE`, { url: request.url, resolvedPath: filePath });
+    
+    if (!fs.existsSync(filePath)) {
+      log(`⚠️ FICHIER INTROUVABLE`, { filePath });
+      return new Response('Not found', { status: 404 });
+    }
+    
     return net.fetch(pathToFileURL(filePath).toString());
   });
 

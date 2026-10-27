@@ -49,20 +49,36 @@ declare global {
         get: (id: string) => Promise<unknown>;
         save: (payload: unknown) => Promise<unknown>;
         generatePdf: (payload: { html: string; fileName: string; documentId?: string }) => Promise<{
-          success: boolean; path?: string; error?: string; canceled?: boolean;
+          success: boolean;
+          path?: string;
+          error?: string;
+          canceled?: boolean;
         }>;
-        generateExcel: (payload: { doc: unknown; client: unknown; documentId?: string }) => Promise<{
-          success: boolean; path?: string; error?: string; canceled?: boolean;
+        generateExcel: (payload: {
+          doc: unknown;
+          client: unknown;
+          documentId?: string;
+        }) => Promise<{
+          success: boolean;
+          path?: string;
+          error?: string;
+          canceled?: boolean;
         }>;
       };
       externalFiles: {
         onChange: (cb: (payload: ExternalChangePayload) => void) => void;
         onMissing: (cb: (payload: ExternalMissingPayload) => void) => void;
         removeAllListeners: () => void;
-        resolve: (payload: { fileId: string; decision: 'imported' | 'ignored' | 'kept_internal' }) => Promise<{ success: boolean; error?: string }>;
+        resolve: (payload: {
+          fileId: string;
+          decision: "imported" | "ignored" | "kept_internal";
+        }) => Promise<{ success: boolean; error?: string }>;
         openFile: (filePath: string) => Promise<{ success: boolean; error?: string }>;
         previewImport: (payload: { fileId: string; documentId: string }) => Promise<PreviewResult>;
-        importExcel: (payload: { fileId: string; documentId: string }) => Promise<{ success: boolean; linesImported?: number; error?: string }>;
+        importExcel: (payload: {
+          fileId: string;
+          documentId: string;
+        }) => Promise<{ success: boolean; linesImported?: number; error?: string }>;
       };
     };
   }

@@ -1,6 +1,6 @@
-import ExcelJS from 'exceljs';
-import { randomUUID } from 'node:crypto';
-import { getDb } from './db/index';
+import ExcelJS from "exceljs";
+import { randomUUID } from "node:crypto";
+import { getDb } from "./db/index";
 
 type ImportedLine = {
   designation: string;
@@ -33,12 +33,15 @@ export type PreviewResult = {
 };
 
 function formatMoney(v: number): string {
-  return new Intl.NumberFormat('fr-DZ', { maximumFractionDigits: 2 })
-    .format(v).replace(/[\u00a0\u202f]/g, ' ') + ' DA';
+  return (
+    new Intl.NumberFormat("fr-DZ", { maximumFractionDigits: 2 })
+      .format(v)
+      .replace(/[\u00a0\u202f]/g, " ") + " DA"
+  );
 }
 
 function formatQty(v: number): string {
-  return new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 3 }).format(v);
+  return new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 3 }).format(v);
 }
 
 function approxEq(a: number, b: number): boolean {
@@ -49,13 +52,13 @@ async function readExcelLines(filePath: string): Promise<ImportedLine[]> {
   const wb = new ExcelJS.Workbook();
   await wb.xlsx.readFile(filePath);
   const ws = wb.worksheets[0];
-  if (!ws) throw new Error('Aucune feuille trouvée dans le fichier.');
+  if (!ws) throw new Error("Aucune feuille trouvée dans le fichier.");
 
   // Trouver la ligne d'en-tête (contient "Désignation" en colonne B)
   let headerRow = 0;
   ws.eachRow((row, rowNumber) => {
     const b = row.getCell(2).value;
-    if (typeof b === 'string' && b.toLowerCase().includes('désignation')) {
+    if (typeof b === "string" && b.toLowerCase().includes("désignation")) {
       headerRow = rowNumber;
     }
   });
@@ -65,7 +68,7 @@ async function readExcelLines(filePath: string): Promise<ImportedLine[]> {
   for (let r = headerRow + 1; r <= ws.rowCount; r++) {
     const row = ws.getRow(r);
     const labelCol = row.getCell(5).value;
-    if (typeof labelCol === 'string' && labelCol.toLowerCase().includes('sous-total')) break;
+    if (typeof labelCol === "string" && labelCol.toLowerCase().includes("sous-total")) break;
 
     const designationCell = row.getCell(2).value;
     if (!designationCell) continue;
@@ -77,7 +80,7 @@ async function readExcelLines(filePath: string): Promise<ImportedLine[]> {
     const designation = String(designationCell).trim();
     if (!designation && !quantity && !price) continue;
 
-    const reference = String(row.getCell(3).value ?? '');
+    const reference = String(row.getCell(3).value ?? "");
     const vatRaw = Number(row.getCell(6).value ?? 0);
     const vat = vatRaw <= 1 ? vatRaw * 100 : vatRaw;
 
@@ -95,18 +98,18 @@ export async function previewExcelChanges(
     const newLines = await readExcelLines(filePath);
     const db = getDb();
     const currentRows = db
-      .prepare('SELECT * FROM document_lines WHERE document_id = ? ORDER BY position ASC')
+      .prepare("SELECT * FROM document_lines WHERE document_id = ? ORDER BY position ASC")
       .all(documentId) as Array<{
-        designation: string | null;
-        item_ref: string | null;
-        quantity: number;
-        unit_price_cents: number;
-        vat_rate: number;
-      }>;
+      designation: string | null;
+      item_ref: string | null;
+      quantity: number;
+      unit_price_cents: number;
+      vat_rate: number;
+    }>;
 
-    const currentLines: ImportedLine[] = currentRows.map(r => ({
-      designation: r.designation ?? '',
-      reference: r.item_ref ?? '',
+    const currentLines: ImportedLine[] = currentRows.map((r) => ({
+      designation: r.designation ?? "",
+      reference: r.item_ref ?? "",
       quantity: r.quantity ?? 1,
       price: (r.unit_price_cents ?? 0) / 100,
       vat: r.vat_rate ?? 0,
@@ -125,12 +128,14 @@ export async function previewExcelChanges(
         diffs.push({
           index: i + 1,
           lineLabel: newLine.designation || `Ligne ${i + 1}`,
-          changes: [{
-            field: 'added',
-            label: 'Ligne ajoutée',
-            oldValue: '—',
-            newValue: `${newLine.designation} · Qté ${formatQty(newLine.quantity)} · ${formatMoney(newLine.price)} · TVA ${newLine.vat} %`,
-          }],
+          changes: [
+            {
+              field: "added",
+              label: "Ligne ajoutée",
+              oldValue: "—",
+              newValue: `${newLine.designation} · Qté ${formatQty(newLine.quantity)} · ${formatMoney(newLine.price)} · TVA ${newLine.vat} %`,
+            },
+          ],
         });
         totalChanges++;
         continue;
@@ -141,12 +146,14 @@ export async function previewExcelChanges(
         diffs.push({
           index: i + 1,
           lineLabel: oldLine.designation || `Ligne ${i + 1}`,
-          changes: [{
-            field: 'removed',
-            label: 'Ligne supprimée',
-            oldValue: `${oldLine.designation} · Qté ${formatQty(oldLine.quantity)} · ${formatMoney(oldLine.price)} · TVA ${oldLine.vat} %`,
-            newValue: '—',
-          }],
+          changes: [
+            {
+              field: "removed",
+              label: "Ligne supprimée",
+              oldValue: `${oldLine.designation} · Qté ${formatQty(oldLine.quantity)} · ${formatMoney(oldLine.price)} · TVA ${oldLine.vat} %`,
+              newValue: "—",
+            },
+          ],
         });
         totalChanges++;
         continue;
@@ -156,40 +163,40 @@ export async function previewExcelChanges(
       const changes: FieldDiff[] = [];
       if (oldLine.designation !== newLine.designation) {
         changes.push({
-          field: 'designation',
-          label: 'Désignation',
-          oldValue: oldLine.designation || '—',
-          newValue: newLine.designation || '—',
+          field: "designation",
+          label: "Désignation",
+          oldValue: oldLine.designation || "—",
+          newValue: newLine.designation || "—",
         });
       }
       if (oldLine.reference !== newLine.reference) {
         changes.push({
-          field: 'reference',
-          label: 'Référence',
-          oldValue: oldLine.reference || '—',
-          newValue: newLine.reference || '—',
+          field: "reference",
+          label: "Référence",
+          oldValue: oldLine.reference || "—",
+          newValue: newLine.reference || "—",
         });
       }
       if (!approxEq(oldLine.quantity, newLine.quantity)) {
         changes.push({
-          field: 'quantity',
-          label: 'Quantité',
+          field: "quantity",
+          label: "Quantité",
           oldValue: formatQty(oldLine.quantity),
           newValue: formatQty(newLine.quantity),
         });
       }
       if (!approxEq(oldLine.price, newLine.price)) {
         changes.push({
-          field: 'price',
-          label: 'Prix unitaire',
+          field: "price",
+          label: "Prix unitaire",
           oldValue: formatMoney(oldLine.price),
           newValue: formatMoney(newLine.price),
         });
       }
       if (!approxEq(oldLine.vat, newLine.vat)) {
         changes.push({
-          field: 'vat',
-          label: 'TVA',
+          field: "vat",
+          label: "TVA",
           oldValue: `${oldLine.vat} %`,
           newValue: `${newLine.vat} %`,
         });
@@ -230,13 +237,13 @@ export async function importExcelFile(
 ): Promise<{ success: boolean; linesImported?: number; error?: string }> {
   try {
     const lines = await readExcelLines(filePath);
-    if (!lines.length) throw new Error('Aucune ligne valide trouvée dans le fichier.');
+    if (!lines.length) throw new Error("Aucune ligne valide trouvée dans le fichier.");
 
     const db = getDb();
     const now = new Date().toISOString();
 
     const tx = db.transaction(() => {
-      db.prepare('DELETE FROM document_lines WHERE document_id = ?').run(documentId);
+      db.prepare("DELETE FROM document_lines WHERE document_id = ?").run(documentId);
 
       const insert = db.prepare(`
         INSERT INTO document_lines (
@@ -247,9 +254,16 @@ export async function importExcelFile(
 
       lines.forEach((l, i) => {
         insert.run(
-          randomUUID(), documentId, i,
-          l.reference || null, l.designation, null, null,
-          l.quantity, Math.round(l.price * 100), l.vat,
+          randomUUID(),
+          documentId,
+          i,
+          l.reference || null,
+          l.designation,
+          null,
+          null,
+          l.quantity,
+          Math.round(l.price * 100),
+          l.vat,
           Math.round(l.quantity * l.price * 100),
         );
       });
@@ -258,19 +272,23 @@ export async function importExcelFile(
       const totalVat = lines.reduce((a, l) => a + l.quantity * l.price * (l.vat / 100), 0);
       const totalTtc = totalHt + totalVat;
 
-      db.prepare(`
+      db.prepare(
+        `
         UPDATE documents
         SET total_ht_cents = ?, total_vat_cents = ?, total_ttc_cents = ?, updated_at = ?
         WHERE id = ?
-      `).run(
+      `,
+      ).run(
         Math.round(totalHt * 100),
         Math.round(totalVat * 100),
         Math.round(totalTtc * 100),
-        now, documentId,
+        now,
+        documentId,
       );
 
-      db.prepare('INSERT INTO audit_events (id, document_id, action, details) VALUES (?, ?, ?, ?)')
-        .run(randomUUID(), documentId, 'Import Excel externe', filePath);
+      db.prepare(
+        "INSERT INTO audit_events (id, document_id, action, details) VALUES (?, ?, ?, ?)",
+      ).run(randomUUID(), documentId, "Import Excel externe", filePath);
     });
     tx();
 

@@ -1,6 +1,6 @@
-import fs from 'node:fs';
-import { BrowserWindow } from 'electron';
-import { computeFileHash, getWatchedFiles, markExternalChange, markFileMissing } from './db/files';
+import fs from "node:fs";
+import { BrowserWindow } from "electron";
+import { computeFileHash, getWatchedFiles, markExternalChange, markFileMissing } from "./db/files";
 
 const POLL_INTERVAL_MS = 5000;
 
@@ -13,9 +13,13 @@ class FileWatcher {
     this.snapshot();
     this.tick(getWindows);
     this.timer = setInterval(() => this.tick(getWindows), POLL_INTERVAL_MS);
-    console.log(`👁️  Watcher démarré · ${this.knownHashes.size} fichier(s) sous surveillance · intervalle ${POLL_INTERVAL_MS} ms`);
+    console.log(
+      `👁️  Watcher démarré · ${this.knownHashes.size} fichier(s) sous surveillance · intervalle ${POLL_INTERVAL_MS} ms`,
+    );
     if (this.knownHashes.size === 0) {
-      console.log('ℹ️  Aucun fichier à surveiller. Exportez un PDF ou un Excel depuis un document pour les activer.');
+      console.log(
+        "ℹ️  Aucun fichier à surveiller. Exportez un PDF ou un Excel depuis un document pour les activer.",
+      );
     }
   }
 
@@ -51,12 +55,19 @@ class FileWatcher {
     for (const f of files) {
       try {
         if (!fs.existsSync(f.path)) {
-          if (f.status !== 'missing') {
+          if (f.status !== "missing") {
             markFileMissing(f.id);
             console.log(`⚠️  Fichier disparu : ${f.path}`);
-            this.emit(getWindows, 'external-file:missing', {
-              fileId: f.id, documentId: f.document_id, path: f.path,
-            }, false);
+            this.emit(
+              getWindows,
+              "external-file:missing",
+              {
+                fileId: f.id,
+                documentId: f.document_id,
+                path: f.path,
+              },
+              false,
+            );
           }
           continue;
         }
@@ -73,21 +84,31 @@ class FileWatcher {
           console.log(`🔍 Modification externe détectée : ${f.path}`);
           markExternalChange(f.id, currentHash);
           this.knownHashes.set(f.id, currentHash);
-          this.emit(getWindows, 'external-file:changed', {
-            fileId: f.id,
-            documentId: f.document_id,
-            path: f.path,
-            oldHash: knownHash,
-            newHash: currentHash,
-          }, true);
+          this.emit(
+            getWindows,
+            "external-file:changed",
+            {
+              fileId: f.id,
+              documentId: f.document_id,
+              path: f.path,
+              oldHash: knownHash,
+              newHash: currentHash,
+            },
+            true,
+          );
         }
       } catch (err) {
-        console.error('Watcher erreur :', err);
+        console.error("Watcher erreur :", err);
       }
     }
   }
 
-  private emit(getWindows: () => BrowserWindow[], channel: string, payload: unknown, forceShow: boolean) {
+  private emit(
+    getWindows: () => BrowserWindow[],
+    channel: string,
+    payload: unknown,
+    forceShow: boolean,
+  ) {
     for (const win of getWindows()) {
       if (win.isDestroyed()) continue;
       if (forceShow) {

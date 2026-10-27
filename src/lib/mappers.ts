@@ -1,4 +1,4 @@
-import type { Client, CommercialDocument, Line, Status, DocumentType } from '@/lib/demo-data';
+import type { Client, CommercialDocument, Line, Status, DocumentType } from "@/lib/demo-data";
 
 // =====================================================================
 // SQLite → React
@@ -43,12 +43,12 @@ type DbDocument = {
 export function dbClientToReact(row: DbClient): Client {
   return {
     id: row.id,
-    name: row.name ?? '',
-    initials: row.initials ?? '',
-    city: row.city ?? '',
-    sector: row.sector ?? '',
-    address: row.address ?? '',
-    contact: row.contact ?? '',
+    name: row.name ?? "",
+    initials: row.initials ?? "",
+    city: row.city ?? "",
+    sector: row.sector ?? "",
+    address: row.address ?? "",
+    contact: row.contact ?? "",
     phone: row.phone ?? undefined,
     email: row.email ?? undefined,
   };
@@ -57,13 +57,13 @@ export function dbClientToReact(row: DbClient): Client {
 export function dbDocumentToReact(row: DbDocument): CommercialDocument {
   return {
     id: row.id,
-    reference: row.reference ?? '',
+    reference: row.reference ?? "",
     type: row.type as DocumentType,
-    clientId: row.client_id ?? '',
+    clientId: row.client_id ?? "",
     date: row.date ?? new Date().toISOString().slice(0, 10),
     validity: row.validity_days ?? 30,
     status: row.status as Status,
-    notes: row.notes ?? '',
+    notes: row.notes ?? "",
     modified: row.updated_at ?? new Date().toISOString(),
     lines: (row.lines ?? []).map(dbLineToReact),
   };
@@ -72,8 +72,8 @@ export function dbDocumentToReact(row: DbDocument): CommercialDocument {
 function dbLineToReact(row: DbLine): Line {
   return {
     id: row.id,
-    designation: row.designation ?? '',
-    reference: row.item_ref ?? '',
+    designation: row.designation ?? "",
+    reference: row.item_ref ?? "",
     quantity: row.quantity ?? 1,
     price: (row.unit_price_cents ?? 0) / 100,
     vat: row.vat_rate ?? 0,
@@ -85,7 +85,7 @@ function dbLineToReact(row: DbLine): Line {
 // =====================================================================
 export function reactDocumentToDb(doc: CommercialDocument, clientSnapshot: Client | null) {
   const linesTotalHt = doc.lines.reduce((a, l) => a + l.quantity * l.price, 0);
-  const linesTotalVat = doc.lines.reduce((a, l) => a + l.quantity * l.price * l.vat / 100, 0);
+  const linesTotalVat = doc.lines.reduce((a, l) => a + (l.quantity * l.price * l.vat) / 100, 0);
 
   return {
     id: doc.id,
@@ -101,7 +101,7 @@ export function reactDocumentToDb(doc: CommercialDocument, clientSnapshot: Clien
     bc_ref: null,
     date: doc.date,
     validity_days: doc.validity,
-    vat_mode: 'line',
+    vat_mode: "line",
     vat_rate: null,
     total_ht_cents: Math.round(linesTotalHt * 100),
     total_vat_cents: Math.round(linesTotalVat * 100),
