@@ -4,14 +4,23 @@ import path from "node:path";
 let tray: Tray | null = null;
 
 function buildIcon(): Electron.NativeImage {
+  // Déterminer le chemin de l'icône selon si on est en dev ou en production
+  const isDev = !app.isPackaged;
+  const iconPath = isDev
+    ? path.join(process.cwd(), "public", "icon.ico")
+    : path.join(__dirname, "../dist/icon.ico");
+
   try {
-    const custom = path.join(process.cwd(), "public", "tray-icon.png");
-    const img = nativeImage.createFromPath(custom);
-    if (!img.isEmpty()) return img.resize({ width: 32, height: 32 });
-  } catch {
-    /* fallback */
+    const img = nativeImage.createFromPath(iconPath);
+    if (!img.isEmpty()) {
+      // On redimensionne pour que ça rentre bien dans la barre des tâches
+      return img.resize({ width: 32, height: 32 });
+    }
+  } catch (err) {
+    console.error("Impossible de charger l'icône .ico pour le tray :", err);
   }
 
+  // --- FALLBACK (Si le fichier icon.ico est introuvable) ---
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
     <rect width="32" height="32" rx="6" fill="#0d6efd"/>
     <text x="16" y="23" font-family="Arial,sans-serif" font-size="20" font-weight="bold" fill="#ffffff" text-anchor="middle">F</text>
